@@ -126,7 +126,7 @@ export default function PlanchetteBoard() {
 
   const [showHelpline, setShowHelpline] = useState(false);
   const historyLimitRef = useRef(80);
-  const DEBUG = true;
+  const DEBUG = false;
   const [debugPerf, setDebugPerf] = useState(null);
 
   const crisisRef = useRef(false);
@@ -566,7 +566,7 @@ export default function PlanchetteBoard() {
     <div className="min-h-screen bg-neutral-950 flex flex-col items-center select-none px-3 sm:px-4 relative">
       {DEBUG && debugPerf && (
         <div className="fixed top-2 left-2 z-50 bg-black/80 border border-amber-900/40 rounded-lg px-3 py-2 font-mono text-[11px] text-amber-300/70 leading-relaxed">
-          <div className="text-amber-500/90 font-bold mb-1">PERF</div>
+          <div className="text-amber-500/90 font-bold mb-1">PERFORMANCE</div>
           <div>Crisis: {debugPerf.crisis_ms}ms</div>
           <div>Response: {debugPerf.response_ms}ms</div>
           <div>Total: {debugPerf.total_ms}ms</div>
@@ -710,20 +710,64 @@ export default function PlanchetteBoard() {
 
           {log.length > 0 && (
             <>
-              <div className="mt-6 space-y-3 text-xs max-h-36 sm:text-sm sm:max-h-48 overflow-y-auto">
-                {[...log].reverse().map((entry, i) => (
-                  <div key={log.length - 1 - i} className={`log-entry ${entry.role === "user" ? "text-neutral-500" : entry.crisis ? "text-red-400/70 font-mono tracking-wider" : "text-amber-400/70 font-mono tracking-wider"}`}>
-                    <span className="text-neutral-600 mr-2">{entry.role === "user" ? "You:" : "Spirit:"}</span>
-                    {entry.text}
-                    {entry.crisis && (
-                      <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center ml-2 text-red-400/50 hover:text-red-400/80 transition-colors align-middle" title="Find a helpline">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                        </svg>
-                      </a>
-                    )}
-                  </div>
-                ))}
+              <div className="mt-6 space-y-2 text-xs max-h-36 sm:text-sm sm:max-h-48 overflow-y-auto">
+                {(() => {
+                  const pairs = [];
+                  for (let j = 0; j < log.length; j += 2) {
+                    const userEntry = log[j];
+                    const spiritEntry = log[j + 1];
+                    pairs.push({ userEntry, spiritEntry, idx: j });
+                  }
+                  const isLastPairWaiting = busy && pairs.length > 0 && !pairs[pairs.length - 1].spiritEntry;
+                  let newestSpiritIdx = -1;
+                  for (let j = pairs.length - 1; j >= 0; j--) {
+                    if (pairs[j].spiritEntry) {
+                      newestSpiritIdx = pairs[j].idx;
+                      break;
+                    }
+                  }
+                  return [...pairs].reverse().map(({ userEntry, spiritEntry, idx }, i) => (
+                    <div key={idx} className="log-pair border-l-2 border-amber-700/30 pl-2 py-1 space-y-0.5">
+                      <div className="text-neutral-500">
+                        <span className="text-neutral-600 mr-2">You:</span>
+                        {userEntry.text}
+                      </div>
+                      {spiritEntry ? (
+                        <div className={spiritEntry.crisis ? "text-red-400/70 font-mono tracking-wider" : "text-amber-400/70 font-mono tracking-wider"}>
+                          <span className="text-neutral-600 mr-2">Spirit:</span>
+                          {idx === newestSpiritIdx
+                            ? spiritEntry.text.split("").map((ch, ci) =>
+                                ch === " " ? (
+                                  <span key={ci} className="log-letter-space" />
+                                ) : (
+                                  <span key={ci} className="log-letter" style={{ animationDelay: `${ci * 50}ms` }}>
+                                    {ch}
+                                  </span>
+                                ),
+                              )
+                            : spiritEntry.text}
+                          {spiritEntry.crisis && (
+                            <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center ml-2 text-red-400/50 hover:text-red-400/80 transition-colors align-middle" title="Find a helpline">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        i === 0 &&
+                        isLastPairWaiting && (
+                          <div className="text-amber-400/40 font-mono tracking-wider">
+                            <span className="text-neutral-600 mr-2">Spirit:</span>
+                            <span className="typing-dot">.</span>
+                            <span className="typing-dot">.</span>
+                            <span className="typing-dot">.</span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  ));
+                })()}
               </div>
               <button onClick={exportMarkdown} className="mt-3 text-[10px] sm:text-xs text-amber-200/20 hover:text-amber-200/50 transition-colors">
                 Export as Markdown
