@@ -1,0 +1,11 @@
+---
+services:
+  planchette:
+    image: bansheetech/planchette:latest
+    container_name: planchette
+    ports:
+      - "7777:7777"
+    volumes:
+      - ./planchette_docker_volume:/app
+      # - /your_ssl_cert:/app/ssl:ro # optional SSL certs directory
+    restart: always

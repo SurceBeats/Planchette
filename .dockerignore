@@ -1,0 +1,29 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+
+# Node
+node_modules/
+
+# Config con secrets (se auto-genera en runtime)
+planchette.ini
+
+# Model weights (downloaded at runtime)
+__planchette_model__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+.env.*
