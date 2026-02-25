@@ -1,6 +1,6 @@
 {
   "src/static/css/global.css": {
-    "file": "assets/global-Suq2BeHB.css",
+    "file": "assets/global-BIj8vZZa.css",
     "src": "src/static/css/global.css",
     "isEntry": true,
     "name": "global",
@@ -9,12 +9,12 @@
     ]
   },
   "src/static/js/__main__.ts": {
-    "file": "assets/__main__-wQZdQahs.js",
+    "file": "assets/__main__-B7x7JUHC.js",
     "name": "__main__",
     "src": "src/static/js/__main__.ts",
     "isEntry": true,
     "css": [
-      "assets/global-Suq2BeHB.css"
+      "assets/global-BIj8vZZa.css"
     ]
   }
 }
