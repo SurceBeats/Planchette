@@ -112,7 +112,7 @@ def get_llm():
             _llm = Llama(
                 model_path=MODEL_PATH,
                 n_ctx=4096,
-                n_threads=4,
+                n_threads=max(1, os.cpu_count() - 1) if os.cpu_count() else 2,
                 verbose=False,
             )
         finally:

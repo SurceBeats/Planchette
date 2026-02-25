@@ -35,6 +35,7 @@ _crisis_logger = logging.getLogger("planchette.crisis")
 
 def _classify_message(llm, user_input):
     try:
+        llm.reset()
         result = llm.create_chat_completion(
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
@@ -196,6 +197,7 @@ def ask():
         global _last_total_ms
         t_resp = time.perf_counter()
         token_count = 0
+        llm.reset()
         stream = llm.create_chat_completion(
             messages=messages,
             max_tokens=128,

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 (Latest)
+
+- Dynamic CPU thread allocation (uses all available cores minus one)
+- KV cache reset before each inference for cleaner and faster responses
+- Safe fallback to 2 threads when CPU core count is unavailable
+
+---
+
 ## 1.0.0 - Initial Release
 
 - Interactive AI-powered spirit board with Ouija-3B model (Q4_K_M)
