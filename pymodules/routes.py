@@ -175,7 +175,7 @@ def ask():
         stream = llm.create_chat_completion(
             messages=messages,
             max_tokens=128,
-            temperature=0.7,
+            temperature=0.8,
             top_p=0.9,
             repeat_penalty=1.4,
             frequency_penalty=0.8,
