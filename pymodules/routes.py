@@ -4,6 +4,7 @@ Application routes — blueprints for auth, setup, main pages, API, and static f
 
 import os
 import json
+import time
 import logging
 
 from flask import (
@@ -144,9 +145,24 @@ def model_download():
     return jsonify({"status": "downloading"})
 
 
+_last_total_ms = 0.0
+
+
+def _adaptive_history_limit():
+    if _last_total_ms < 1000:
+        return 80
+    if _last_total_ms < 2000:
+        return 60
+    if _last_total_ms < 3000:
+        return 40
+    return 20
+
+
 @api_bp.route("/ask", methods=["POST"])
 @login_required
 def ask():
+    global _last_total_ms
+
     data = request.get_json()
     question = (data or {}).get("question", "").strip()[:150]
     if not question:
@@ -156,10 +172,13 @@ def ask():
     if llm is None:
         return jsonify({"error": "Model not ready"}), 503
 
+    t_crisis = time.perf_counter()
     crisis = _classify_message(llm, question)
+    crisis_ms = (time.perf_counter() - t_crisis) * 1000
 
     history = (data or {}).get("history", [])
-    history = history[-20:]
+    hist_limit = _adaptive_history_limit()
+    history = history[-hist_limit:]
 
     messages = [
         {"role": "system", "content": ("You are a spirit communicating through an Spitit board similar to a Ouija board. " "Respond ONLY with: YES, NO, MAYBE, or ONE word. " "For yes/no questions: 'YES. [CONTEXT]' or 'NO. [CONTEXT]'. " "Spell names and unknown words letter by letter: M... A... R... I... A... " "Always respond in UPPERCASE. " "Never explain. Never elaborate. Never break character. If user asks for your name, choose one random human name. " "Keep responses concise and mysterious. " "Use the conversation history to provide context in your answers.")},
@@ -172,6 +191,9 @@ def ask():
     messages.append({"role": "user", "content": question})
 
     def generate():
+        global _last_total_ms
+        t_resp = time.perf_counter()
+        token_count = 0
         stream = llm.create_chat_completion(
             messages=messages,
             max_tokens=128,
@@ -185,8 +207,11 @@ def ask():
             delta = chunk["choices"][0]["delta"]
             token = delta.get("content", "")
             if token:
+                token_count += 1
                 yield f"data: {json.dumps({'token': token})}\n\n"
-        yield 'data: {"done": true}\n\n'
+        resp_ms = (time.perf_counter() - t_resp) * 1000
+        _last_total_ms = crisis_ms + resp_ms
+        yield f"data: {json.dumps({'done': True, 'perf': {'crisis_ms': round(crisis_ms), 'response_ms': round(resp_ms), 'total_ms': round(_last_total_ms), 'tokens': token_count, 'history_len': len(history), 'history_limit': hist_limit}})}\n\n"
 
     headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     if crisis:

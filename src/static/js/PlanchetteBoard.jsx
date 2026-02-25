@@ -80,7 +80,10 @@ async function streamQuestion(question, { onToken, onDone, onCrisis, signal, his
       if (!line.startsWith("data: ")) continue;
       try {
         const data = JSON.parse(line.slice(6));
-        if (data.done) continue;
+        if (data.done) {
+          onDone(fullAnswer, data.perf || null);
+          return;
+        }
         if (data.token) {
           fullAnswer += data.token;
           onToken(data.token, fullAnswer);
@@ -90,7 +93,7 @@ async function streamQuestion(question, { onToken, onDone, onCrisis, signal, his
       }
     }
   }
-  onDone(fullAnswer);
+  onDone(fullAnswer, null);
 }
 
 export default function PlanchetteBoard() {
@@ -122,6 +125,9 @@ export default function PlanchetteBoard() {
   const waitTimerRef = useRef(null);
 
   const [showHelpline, setShowHelpline] = useState(false);
+  const historyLimitRef = useRef(80);
+  const DEBUG = true;
+  const [debugPerf, setDebugPerf] = useState(null);
 
   const crisisRef = useRef(false);
 
@@ -357,7 +363,7 @@ export default function PlanchetteBoard() {
       if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
       waitTimerRef.current = setTimeout(() => setWaiting(true), 150);
 
-      const recentLog = log.slice(-10);
+      const recentLog = log.slice(-historyLimitRef.current);
       const history = recentLog.map((entry) => ({
         role: entry.role === "user" ? "user" : "assistant",
         content: entry.text,
@@ -451,7 +457,9 @@ export default function PlanchetteBoard() {
 
             enqueueAnim([...prefix, ...targets]);
           },
-          onDone() {
+          onDone(_, perf) {
+            if (perf?.history_limit) historyLimitRef.current = perf.history_limit;
+            if (perf) setDebugPerf(perf);
             if (wordBufRef.current) {
               const remaining = lettersOf(wordBufRef.current);
               wordBufRef.current = "";
@@ -556,6 +564,18 @@ export default function PlanchetteBoard() {
 
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col items-center select-none px-3 sm:px-4 relative">
+      {DEBUG && debugPerf && (
+        <div className="fixed top-2 left-2 z-50 bg-black/80 border border-amber-900/40 rounded-lg px-3 py-2 font-mono text-[11px] text-amber-300/70 leading-relaxed">
+          <div className="text-amber-500/90 font-bold mb-1">PERF</div>
+          <div>Crisis: {debugPerf.crisis_ms}ms</div>
+          <div>Response: {debugPerf.response_ms}ms</div>
+          <div>Total: {debugPerf.total_ms}ms</div>
+          <div>Tokens: {debugPerf.tokens}</div>
+          <div>
+            History: {debugPerf.history_len}/{debugPerf.history_limit}
+          </div>
+        </div>
+      )}
       <button onClick={() => setShowSettings(true)} className="absolute top-3 right-3 p-2 rounded-lg text-amber-200/30 hover:text-amber-200/70 hover:bg-amber-200/10 transition-colors z-10" title="Settings">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />

@@ -111,7 +111,7 @@ def get_llm():
         try:
             _llm = Llama(
                 model_path=MODEL_PATH,
-                n_ctx=2048,
+                n_ctx=4096,
                 n_threads=4,
                 verbose=False,
             )
