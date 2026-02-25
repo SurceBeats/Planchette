@@ -128,7 +128,7 @@ If you discover any security vulnerabilities, please contact us at [claudio@bans
 ## License
 
 Created by [Claudio Gonzalez](https://github.com/SurceBeats).
-Planchette is licensed under the [AGPL-3.0 License](LICENSE).
+Planchette is licensed under the [AGPL-3.0 License](LICENSE.md).
 
 ---
 
