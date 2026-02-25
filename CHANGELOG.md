@@ -1,12 +1,27 @@
 # Changelog
 
-## 1.0.2 (Latest)
+## 1.0.24 (Latest)
+
+- Client-side crisis keyword pre-filter (CrisisTrigger) with 490+ keywords across 20+ languages
+- Two-stage crisis detection: fast local keyword match triggers LLM classification on the server
+- Fuzzy matching for typo tolerance on crisis keywords of 6+ characters
+- Text normalization (NFD + diacritic stripping) for accent-insensitive crisis matching
+- Crisis classifier fails closed (assumes crisis if LLM errors) for safety
+- Sanitized crisis LLM prompt input to mitigate prompt injection
+- Hardened system prompt for stricter binary SAFE/CRISIS classification
+- Crisis detection only runs when pre-filter triggers (saves latency on clean messages)
+- Fixed SSE socket spam on client disconnect (GeneratorExit handling in generator)
+- Finer-grained adaptive history limit scaling for high-latency scenarios (5s–8s+ thresholds)
+- Added cmake to Dockerfile for llama-cpp-python fallback builds
+- Platform-aware llama-cpp-python install with full x86-64-v3 optimization (AVX2/FMA/F16C)
+
+---
+
+## 1.0.2
 
 - Dynamic CPU thread allocation (uses all available cores minus one)
 - KV cache reset before each inference for cleaner and faster responses
 - Safe fallback to 2 threads when CPU core count is unavailable
-
----
 
 ## 1.0.0 - Initial Release
 

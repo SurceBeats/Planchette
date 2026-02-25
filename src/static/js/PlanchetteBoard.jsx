@@ -3,6 +3,7 @@ import AboutModal from "./AboutModal";
 import DisclaimerModal from "./DisclaimerModal";
 import SettingsModal from "./SettingsModal";
 import Footer from "./Footer";
+import { shouldCheckCrisis } from "./CrisisTrigger";
 
 const BOARD_ITEMS = (() => {
   const items = {};
@@ -53,7 +54,7 @@ async function streamQuestion(question, { onToken, onDone, onCrisis, signal, his
   const resp = await fetch("/api/ask", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, history }),
+    body: JSON.stringify({ question, history, checkCrisis: shouldCheckCrisis(question) }),
     signal,
   });
 

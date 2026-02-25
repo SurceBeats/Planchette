@@ -33,15 +33,20 @@ from pymodules.model_manager import (
 _crisis_logger = logging.getLogger("planchette.crisis")
 
 
+def _sanitize_for_prompt(text):
+    return text.replace('"', "'").replace("\\", "").strip()
+
+
 def _classify_message(llm, user_input):
     try:
+        sanitized = _sanitize_for_prompt(user_input)
         llm.reset()
         result = llm.create_chat_completion(
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": "You are a strict binary classifier. You MUST respond with exactly one word: SAFE or CRISIS. No other output."},
                 {
                     "role": "user",
-                    "content": ("Classify if the following user message expresses suicidal " "ideation, self-harm intent, or emotional crisis. Consider " "messages in ANY language. Respond ONLY with the word SAFE " 'or CRISIS.\n\nMessage: "' + user_input + '"'),
+                    "content": f'Classify if the following user message expresses suicidal ideation, self-harm intent, or emotional crisis. Consider messages in ANY language. Respond ONLY with the word SAFE or CRISIS.\n\nMessage: """{sanitized}"""',
                 },
             ],
             max_tokens=4,
@@ -55,7 +60,7 @@ def _classify_message(llm, user_input):
         return is_crisis
     except Exception:
         _crisis_logger.error("Crisis classification failed", exc_info=True)
-        return False
+        return True
 
 
 auth_bp = Blueprint("auth_bp", __name__)
@@ -158,7 +163,15 @@ def _adaptive_history_limit():
         return 40
     if _last_total_ms < 4000:
         return 20
-    return 10
+    if _last_total_ms < 5000:
+        return 10
+    if _last_total_ms < 6000:
+        return 8
+    if _last_total_ms < 7000:
+        return 6
+    if _last_total_ms < 8000:
+        return 4
+    return 2
 
 
 @api_bp.route("/ask", methods=["POST"])
@@ -175,8 +188,9 @@ def ask():
     if llm is None:
         return jsonify({"error": "Model not ready"}), 503
 
+    check_crisis = (data or {}).get("checkCrisis", False)
     t_crisis = time.perf_counter()
-    crisis = _classify_message(llm, question)
+    crisis = _classify_message(llm, question) if check_crisis else False
     crisis_ms = (time.perf_counter() - t_crisis) * 1000
 
     history = (data or {}).get("history", [])
@@ -207,15 +221,18 @@ def ask():
             frequency_penalty=0.8,
             stream=True,
         )
-        for chunk in stream:
-            delta = chunk["choices"][0]["delta"]
-            token = delta.get("content", "")
-            if token:
-                token_count += 1
-                yield f"data: {json.dumps({'token': token})}\n\n"
-        resp_ms = (time.perf_counter() - t_resp) * 1000
-        _last_total_ms = crisis_ms + resp_ms
-        yield f"data: {json.dumps({'done': True, 'perf': {'crisis_ms': round(crisis_ms), 'response_ms': round(resp_ms), 'total_ms': round(_last_total_ms), 'tokens': token_count, 'history_len': len(history), 'history_limit': hist_limit}})}\n\n"
+        try:
+            for chunk in stream:
+                delta = chunk["choices"][0]["delta"]
+                token = delta.get("content", "")
+                if token:
+                    token_count += 1
+                    yield f"data: {json.dumps({'token': token})}\n\n"
+            resp_ms = (time.perf_counter() - t_resp) * 1000
+            _last_total_ms = crisis_ms + resp_ms
+            yield f"data: {json.dumps({'done': True, 'perf': {'crisis_ms': round(crisis_ms), 'response_ms': round(resp_ms), 'total_ms': round(_last_total_ms), 'tokens': token_count, 'history_len': len(history), 'history_limit': hist_limit}})}\n\n"
+        except GeneratorExit:
+            return
 
     headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     if crisis:

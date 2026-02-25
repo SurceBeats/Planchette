@@ -1,6 +1,6 @@
 {
   "name": "planchette-talking-board",
-  "version": "1.0.2",
+  "version": "1.0.24",
   "private": true,
   "type": "module",
   "scripts": {
