@@ -155,7 +155,9 @@ def _adaptive_history_limit():
         return 60
     if _last_total_ms < 3000:
         return 40
-    return 20
+    if _last_total_ms < 4000:
+        return 20
+    return 10
 
 
 @api_bp.route("/ask", methods=["POST"])
