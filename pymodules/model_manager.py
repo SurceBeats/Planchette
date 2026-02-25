@@ -60,7 +60,6 @@ def download_model() -> None:
             download_state.update(status="ready", progress=1.0)
         except Exception as e:
             download_state.update(status="error", error=str(e))
-            # Clean up partial file
             tmp_path = MODEL_PATH + ".part"
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)

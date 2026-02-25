@@ -25,7 +25,7 @@ def ensure_config(config_path: str) -> configparser.ConfigParser:
     if not cfg.has_section("server"):
         cfg.add_section("server")
         needs_write = True
-    for key, default in [("host", "0.0.0.0"), ("port", "5001"), ("run_mode", "PROD")]:
+    for key, default in [("host", "0.0.0.0"), ("port", "7777"), ("run_mode", "PROD")]:
         if not cfg.has_option("server", key):
             cfg.set("server", key, default)
             needs_write = True

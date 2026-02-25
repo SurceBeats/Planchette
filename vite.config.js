@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
 
-const FLASK_PORT = 5001;
+const FLASK_PORT = 7777;
 
 export default defineConfig(({ mode }) => ({
   base: mode === "production" ? "/src/dist/" : "/",

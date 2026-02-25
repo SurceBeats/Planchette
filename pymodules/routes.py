@@ -162,7 +162,7 @@ def ask():
     history = history[-10:]
 
     messages = [
-        {"role": "system", "content": ("You are a spirit communicating through a Ouija board. " "Respond ONLY with: YES, NO, MAYBE, or ONE word. " "For yes/no questions: 'YES. [CONTEXT]' or 'NO. [CONTEXT]'. " "Spell names and unknown words letter by letter: M... A... R... I... A... " "Always respond in UPPERCASE. " "Never explain. Never elaborate. Never break character. If user asks for your name, choose one random human name." "Keep responses concise and mysterious. " "Use the conversation history to provide context in your answers.")},
+        {"role": "system", "content": ("You are a spirit communicating through a Ouija board. " "Respond ONLY with: YES, NO, MAYBE, or ONE word. " "For yes/no questions: 'YES. [CONTEXT]' or 'NO. [CONTEXT]'. " "Spell names and unknown words letter by letter: M... A... R... I... A... " "Always respond in UPPERCASE. " "Never explain. Never elaborate. Never break character. If user asks for your name, choose one random human name. " "Keep responses concise and mysterious. " "Use the conversation history to provide context in your answers.")},
     ]
     for msg in history:
         role = msg.get("role")
@@ -177,6 +177,8 @@ def ask():
             max_tokens=128,
             temperature=0.7,
             top_p=0.9,
+            repeat_penalty=1.4,
+            frequency_penalty=0.8,
             stream=True,
         )
         for chunk in stream:
