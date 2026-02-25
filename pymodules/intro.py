@@ -34,8 +34,9 @@ def _row(label: str, value: str, col: int = 10) -> str:
     return _line(f"  {label}{gap}{value}")
 
 
-def show_banner(host: str, port: int, mode: str):
-    url = f"http://{host}:{port}"
+def show_banner(host: str, port: int, mode: str, ssl: bool = False):
+    protocol = "https" if ssl else "http"
+    url = f"{protocol}://{host}:{port}"
 
     art = [
         f"  {AMBER}{BOLD}  ____  _                  _          _   _       {RESET}",
@@ -61,6 +62,7 @@ def show_banner(host: str, port: int, mode: str):
     lines.append(_line())
     lines.append(_row(f"{DIM}Server{RESET}", url))
     lines.append(_row(f"{DIM}Mode{RESET}", mode))
+    lines.append(_row(f"{DIM}SSL{RESET}", f"\033[92mEnabled\033[0m" if ssl else f"\033[91mDisabled\033[0m"))
     lines.append(_row(f"{DIM}Model{RESET}", "Ouija-3B (Q4_K_M)"))
     gpu = False
     try:
