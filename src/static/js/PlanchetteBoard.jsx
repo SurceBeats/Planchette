@@ -532,7 +532,7 @@ export default function PlanchetteBoard() {
 
   const exportMarkdown = useCallback(() => {
     const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    let md = `# Planchette Talking Board — Session Log\n\n`;
+    let md = `# Planchette - The Talking Board — Session Log\n\n`;
     md += `**Date:** ${date}  \n`;
     md += `**Model:** Ouija-3B\n\n---\n\n`;
     for (const entry of log) {
@@ -587,7 +587,7 @@ export default function PlanchetteBoard() {
         <img src="/__data__/logoSmall.png" alt="" className="h-7 sm:h-9 opacity-80 smoke-text" />
         <h1 className="text-2xl sm:text-3xl font-serif tracking-widest text-amber-200/80 uppercase smoke-text">Planchette</h1>
       </div>
-      <p className="text-[10px] mb-4 sm:text-xs sm:mb-4 tracking-[0.3em] text-amber-200/30 uppercase subtitle-fade">Talking Board</p>
+      <p className="text-[10px] mb-4 sm:text-xs sm:mb-4 tracking-[0.3em] text-amber-200/30 uppercase subtitle-fade">The Talking Board</p>
 
       <div className={`relative w-full max-w-2xl aspect-[4/3] mx-auto cursor-pointer ${transitioning ? "board-awaken" : ""} ${boardEffect === "shake" ? "board-shake" : ""} ${boardEffect === "glow" ? "board-glow" : ""} ${boardEffect === "flicker" ? "board-flicker" : ""} ${boardEffect === "fadeout" ? "board-fadeout" : ""}`} onClick={!started && !transitioning ? startSession : undefined}>
         <div className="absolute inset-0 rounded-2xl border border-amber-900/40 bg-gradient-to-b from-amber-950/30 via-neutral-900 to-neutral-950 shadow-2xl overflow-hidden">

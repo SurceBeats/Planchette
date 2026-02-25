@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Planchette Talking Board — entry point
+Planchette The Talking Board — entry point
 Run: python . (or python __main__.py)
 """
 
