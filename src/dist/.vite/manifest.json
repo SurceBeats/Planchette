@@ -1,0 +1,20 @@
+{
+  "src/static/css/global.css": {
+    "file": "assets/global-Suq2BeHB.css",
+    "src": "src/static/css/global.css",
+    "isEntry": true,
+    "name": "global",
+    "names": [
+      "global.css"
+    ]
+  },
+  "src/static/js/__main__.ts": {
+    "file": "assets/__main__-DeOpxPY2.js",
+    "name": "__main__",
+    "src": "src/static/js/__main__.ts",
+    "isEntry": true,
+    "css": [
+      "assets/global-Suq2BeHB.css"
+    ]
+  }
+}

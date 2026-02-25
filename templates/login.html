@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planchette — Login</title>
+    <link rel="icon" href="/__data__/logoSmall.png" />
+    {{ vitecss("global") | safe }}
+  </head>
+  <body class="min-h-screen flex flex-col items-center justify-center bg-neutral-950 select-none px-4">
+    <img src="/__data__/logoSmall.png" alt="Planchette" class="w-16 h-16 sm:w-20 sm:h-20 mb-4 opacity-80 smoke-text" />
+    <h1 class="text-2xl sm:text-3xl font-serif tracking-widest text-amber-200/80 uppercase mb-1 smoke-text">Planchette</h1>
+    <p class="text-[10px] sm:text-xs tracking-[0.3em] text-amber-200/30 uppercase mb-8 subtitle-fade">Talking Board</p>
+
+    <div class="bg-neutral-900 border border-amber-900/40 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+      {% with messages = get_flashed_messages() %} {% if messages %} {% for msg in messages %}
+      <div class="bg-red-950/50 border border-red-900/40 text-red-400/80 px-3 py-2 rounded-lg mb-4 text-sm text-center">{{ msg }}</div>
+      {% endfor %} {% endif %} {% endwith %}
+
+      <form method="POST">
+        <label for="username" class="block text-xs tracking-wider text-amber-200/30 uppercase mb-1">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required autofocus class="w-full text-sm py-2 px-3 bg-neutral-800 border border-amber-900/30 rounded-lg text-amber-100 placeholder-amber-200/20 outline-none focus:border-amber-700/60 transition-colors mb-4" />
+
+        <label for="password" class="block text-xs tracking-wider text-amber-200/30 uppercase mb-1">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required class="w-full text-sm py-2 px-3 bg-neutral-800 border border-amber-900/30 rounded-lg text-amber-100 placeholder-amber-200/20 outline-none focus:border-amber-700/60 transition-colors mb-6" />
+
+        <button type="submit" class="w-full py-2 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 text-sm font-medium cursor-pointer transition-colors">Log in</button>
+      </form>
+    </div>
+  </body>
+</html>
