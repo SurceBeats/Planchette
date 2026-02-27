@@ -115,7 +115,9 @@ export default function PlanchetteBoard() {
 
   const audioRef = useRef(null);
   const interactRef = useRef(null);
-  const angerRef = useRef(null);
+  const noRef = useRef(null);
+  const yesRef = useRef(null);
+  const maybeRef = useRef(null);
 
   const [modelStatus, setModelStatus] = useState("checking");
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -150,10 +152,20 @@ export default function PlanchetteBoard() {
       sfx.volume = 0.5;
       interactRef.current = sfx;
     }
-    if (!angerRef.current) {
-      const sfx = new Audio("/__data__/anger.mp3");
-      sfx.volume = 0.3;
-      angerRef.current = sfx;
+    if (!noRef.current) {
+      const sfx = new Audio("/__data__/no01.mp3");
+      sfx.volume = 0.5;
+      noRef.current = sfx;
+    }
+    if (!yesRef.current) {
+      const sfx = new Audio("/__data__/yes01.mp3");
+      sfx.volume = 0.5;
+      yesRef.current = sfx;
+    }
+    if (!maybeRef.current) {
+      const sfx = new Audio("/__data__/maybe01.mp3");
+      sfx.volume = 0.5;
+      maybeRef.current = sfx;
     }
   }, []);
 
@@ -330,9 +342,21 @@ export default function PlanchetteBoard() {
       if (type === "shake") {
         animSpeedRef.current = 350;
         smoothAudioTransition(0.9, 0.5);
-        if (angerRef.current) {
-          angerRef.current.currentTime = 0;
-          angerRef.current.play().catch(() => {});
+        if (noRef.current) {
+          noRef.current.currentTime = 0;
+          noRef.current.play().catch(() => {});
+        }
+      }
+      if (type === "glow") {
+        if (yesRef.current) {
+          yesRef.current.currentTime = 0;
+          yesRef.current.play().catch(() => {});
+        }
+      }
+      if (type === "flicker") {
+        if (maybeRef.current) {
+          maybeRef.current.currentTime = 0;
+          maybeRef.current.play().catch(() => {});
         }
       }
       boardEffectTimer.current = setTimeout(() => {
@@ -422,8 +446,8 @@ export default function PlanchetteBoard() {
               afterEllipsisRef.current = false;
 
               if (matchedWord === "NO" && Math.random() < 0.2) triggerEffect("shake", 7000);
-              else if (matchedWord === "YES" && Math.random() < 0.1) triggerEffect("glow", 5000);
-              else if (matchedWord === "MAYBE" && Math.random() < 0.4) triggerEffect("flicker", 1500);
+              else if (matchedWord === "YES" && Math.random() < 0.2) triggerEffect("glow", 5000);
+              else if (matchedWord === "MAYBE" && Math.random() < 0.2) triggerEffect("flicker", 1500);
               else if (matchedWord === "GOODBYE") triggerEffect("fadeout", 2500);
 
               const targets = [matchedWord];
@@ -686,8 +710,8 @@ export default function PlanchetteBoard() {
       {started && (
         <div className="mt-6 mb-8 w-full max-w-2xl ui-slide-in">
           <div className="flex gap-3">
-            <input type="text" value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 150))} onKeyDown={handleKeyDown} maxLength={150} placeholder={busy ? "The spirits are speaking…" : "Ask the spirits…"} className="flex-1 min-w-0 text-sm py-2.5 px-3 sm:text-base sm:py-3 sm:px-4 bg-neutral-900 border border-amber-900/30 rounded-lg text-amber-100 placeholder-amber-200/20 outline-none focus:border-amber-700/60 transition-colors" />
-            <button onClick={handleAsk} disabled={!question.trim() || busy} className="px-4 text-sm sm:px-6 sm:text-base py-3 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+            <input type="text" value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 150))} onKeyDown={handleKeyDown} maxLength={150} placeholder={busy ? "The spirits are speaking…" : "Ask the spirits…"} className="flex-1 min-w-0 text-base py-2.5 px-3 sm:py-3 sm:px-4 bg-neutral-900 border border-amber-900/30 rounded-lg text-amber-100 placeholder-amber-200/20 outline-none focus:border-amber-700/60 transition-colors" />
+            <button onClick={handleAsk} disabled={!question.trim() || busy} className="px-4 text-base sm:px-6 py-3 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               {busy ? "…" : "Ask"}
             </button>
           </div>

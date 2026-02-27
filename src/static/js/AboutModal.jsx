@@ -60,13 +60,31 @@ export default function AboutModal({ onClose }) {
               <span className="text-amber-200/30">License: Creative Commons 0</span>
             </p>
             <p className="mt-2">
-              <span className="text-amber-300/60">11605 resonating ghost fly.wav</span> by <span className="text-amber-300/60">Robinhood76</span>
+              <span className="text-amber-300/60">Hint, Clue, Trace, 01</span> by <span className="text-amber-300/60">LilMati</span>
               <br />
-              <a href="https://freesound.org/s/704427/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
-                freesound.org/s/704427
+              <a href="https://freesound.org/s/441266/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
+                freesound.org/s/441266
               </a>
               <br />
-              <span className="text-amber-200/30">License: Attribution NonCommercial 4.0</span>
+              <span className="text-amber-200/30">License: Creative Commons 0</span>
+            </p>
+            <p className="mt-2">
+              <span className="text-amber-300/60">Prompt user for response</span> by <span className="text-amber-300/60">noirenex</span>
+              <br />
+              <a href="https://freesound.org/s/245662/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
+                freesound.org/s/245662
+              </a>
+              <br />
+              <span className="text-amber-200/30">License: Creative Commons 0</span>
+            </p>
+            <p className="mt-2">
+              <span className="text-amber-300/60">Scary Horn</span> by <span className="text-amber-300/60">Poligonstudio</span>
+              <br />
+              <a href="https://freesound.org/s/397318/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
+                freesound.org/s/397318
+              </a>
+              <br />
+              <span className="text-amber-200/30">License: Creative Commons 0</span>
             </p>
           </div>
 

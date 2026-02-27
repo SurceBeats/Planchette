@@ -1,6 +1,19 @@
 # Changelog
 
-## 1.0.24 (Latest)
+## 1.0.26 (Latest)
+
+- Fixed iOS Safari auto-zoom on chat input focus (font-size bumped to 16px on mobile)
+- Added `maximum-scale=1.0` to viewport meta tag across all templates for consistent zoom prevention
+- Unified viewport meta tags in login, setup, and main board pages
+- Replaced anger sound with "Scary Horn" by Poligonstudio (CC0) — freesound.org/s/397318
+- Increased anger sound volume from 0.3 to 0.5
+- Renamed anger.mp3 to no01.mp3
+- YES glow effect probability increased from 10% to 20% (matches NO shake)
+- MAYBE flicker effect probability adjusted from 40% to 20% (matches NO/YES)
+
+---
+
+## 1.0.24
 
 - Client-side crisis keyword pre-filter (CrisisTrigger) with 490+ keywords across 20+ languages
 - Two-stage crisis detection: fast local keyword match triggers LLM classification on the server
@@ -14,8 +27,6 @@
 - Finer-grained adaptive history limit scaling for high-latency scenarios (5s–8s+ thresholds)
 - Added cmake to Dockerfile for llama-cpp-python fallback builds
 - Platform-aware llama-cpp-python install with full x86-64-v3 optimization (AVX2/FMA/F16C)
-
----
 
 ## 1.0.2
 
