@@ -1,6 +1,20 @@
 # Changelog
 
-## 1.0.26 (Latest)
+## 1.0.28 (Latest)
+
+- Canvas-based poltergeist effects overlay on the spirit board (5% chance per response)
+- Smoke wisps: semi-transparent amber particles drift upward with sinusoidal wobble
+- Static/interference: noise pixels and horizontal scanlines like EMF camera footage
+- Shadow figure: dark translucent silhouette materializes and dissolves with faint amber eyes
+- Spirit orbs: glowing amber/white spheres with soft radial glow drift across the board
+- Scratches: thin golden lines progressively drawn with jagged paths, then fade
+- Effects use `<canvas>` overlay with `pointer-events: none` — zero layout interference
+- 60fps rendering via requestAnimationFrame with automatic cleanup
+- DPI-aware canvas scaling for sharp rendering on retina displays
+
+---
+
+## 1.0.26
 
 - Fixed iOS Safari auto-zoom on chat input focus (font-size bumped to 16px on mobile)
 - Added `maximum-scale=1.0` to viewport meta tag across all templates for consistent zoom prevention

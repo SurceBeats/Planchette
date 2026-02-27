@@ -4,6 +4,7 @@ import DisclaimerModal from "./DisclaimerModal";
 import SettingsModal from "./SettingsModal";
 import Footer from "./Footer";
 import { shouldCheckCrisis } from "./CrisisTrigger";
+import PoltergeistCanvas from "./PoltergeistCanvas";
 
 const BOARD_ITEMS = (() => {
   const items = {};
@@ -111,6 +112,7 @@ export default function PlanchetteBoard() {
   const [transitioning, setTransitioning] = useState(false);
   const [boardEffect, setBoardEffect] = useState(null);
   const boardEffectTimer = useRef(null);
+  const [poltergeistTrigger, setPoltergeistTrigger] = useState(0);
   const animSpeedRef = useRef(1000);
 
   const audioRef = useRef(null);
@@ -406,6 +408,7 @@ export default function PlanchetteBoard() {
             if (waitTimerRef.current) {
               clearTimeout(waitTimerRef.current);
               waitTimerRef.current = null;
+              if (Math.random() < 0.05) setPoltergeistTrigger((n) => n + 1);
             }
             setWaiting(false);
             const clean = cleanToken(token);
@@ -676,6 +679,8 @@ export default function PlanchetteBoard() {
             <circle cx="62" cy="36" r="2.5" fill="#2a1809" stroke="#8b6914" strokeWidth="0.8" />
           </svg>
         </div>
+
+        <PoltergeistCanvas trigger={poltergeistTrigger} />
       </div>
 
       {started && revealedLetters.length > 0 && (
