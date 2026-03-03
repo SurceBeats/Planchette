@@ -1,6 +1,18 @@
 {
+  "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js": {
+    "file": "assets/planchette-CifD79Qc3r4r.js",
+    "name": "react-pdf.browser",
+    "src": "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/static/js/__main__.ts"
+    ],
+    "css": [
+      "assets/planchette-DojhdHHIvRRO.css"
+    ]
+  },
   "src/static/css/global.css": {
-    "file": "assets/global-BY_VNOqp.css",
+    "file": "assets/planchette-DojhdHHIvRRO.css",
     "src": "src/static/css/global.css",
     "isEntry": true,
     "name": "global",
@@ -9,12 +21,15 @@
     ]
   },
   "src/static/js/__main__.ts": {
-    "file": "assets/__main__-BECPlMIQ.js",
+    "file": "assets/planchette-n-ggZzvw23zw.js",
     "name": "__main__",
     "src": "src/static/js/__main__.ts",
     "isEntry": true,
+    "dynamicImports": [
+      "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js"
+    ],
     "css": [
-      "assets/global-BY_VNOqp.css"
+      "assets/planchette-DojhdHHIvRRO.css"
     ]
   }
 }

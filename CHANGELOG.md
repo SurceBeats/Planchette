@@ -1,6 +1,15 @@
 # Changelog
 
-## 1.0.30 (Latest)
+## 1.0.32 (Latest)
+
+- Real PDF export: replaced `window.open()` + `window.print()` with `@react-pdf/renderer` for actual `.pdf` file generation that works on mobile Safari/Chrome
+- PDF lazy-loaded via dynamic `import()` — only fetched when user taps Export
+- App Store badge in PDF is now a clickable link
+- Added `flask-compress` for gzip/brotli compression on all responses
+- Build output files renamed to `planchette-{hash}.{ext}` pattern
+- Increased Vite chunk size warning limit to 2MB, take that homie!
+
+## 1.0.30
 
 - Anti-repeat system: two-tier cache (seen + ban) strips repeated spirit responses from conversation context, forcing varied answers without extra inference
 - 120-second response cache with automatic expiry

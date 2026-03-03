@@ -27,10 +27,16 @@ export default defineConfig(({ mode }) => ({
     outDir: "src/dist",
     manifest: true,
     minify: true,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       input: {
         global: resolve(__dirname, "src/static/css/global.css"),
         __main__: resolve(__dirname, "src/static/js/__main__.ts"),
+      },
+      output: {
+        entryFileNames: "assets/planchette-[hash:12].js",
+        chunkFileNames: "assets/planchette-[hash:12].js",
+        assetFileNames: "assets/planchette-[hash:12][extname]",
       },
     },
   },

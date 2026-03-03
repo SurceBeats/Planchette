@@ -3,6 +3,7 @@ import mimetypes
 import configparser
 
 from flask import Flask
+from flask_compress import Compress
 
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
@@ -28,6 +29,7 @@ def create_app(cfg: configparser.ConfigParser, config_path: str) -> Flask:
     app.config["CONFIG_PATH"] = config_path
     app.config["CFG"] = cfg
 
+    Compress(app)
     login_manager.init_app(app)
 
     register_vite_assets(
