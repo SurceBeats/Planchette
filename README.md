@@ -22,7 +22,7 @@
 
 **Planchette** is an AI-powered spirit board that runs entirely on your machine. Ask a question, and the planchette moves across the board spelling out the spirit's answer. Letter by letter, word by word.
 
-It uses **Ouija-3B**, a 3B parameter language model fine-tuned to behave like a spirit communicating through a talking board. No cloud, no API keys, no internet required after the initial model download.
+It uses **[Ouija2-1.7B](https://huggingface.co/BansheeTechnologies/Ouija2-1.7B)**, a 1.7B parameter language model fine-tuned to behave like a spirit communicating through a talking board. No cloud, no API keys, no internet required after the initial model download.
 
 ---
 
@@ -88,7 +88,7 @@ Frontend (React + Tailwind CSS)
 └── Animation system (board effects, letter reveals)
 
 Backend (Python + Flask + Hypercorn — Bridged with vite-fusion)
-├── Ouija-3B inference via llama-cpp-python
+├── Ouija2-1.7B inference via llama-cpp-python
 ├── Crisis classification pipeline
 ├── Adaptive performance system
 └── Hypercorn ASGI server with SSL support

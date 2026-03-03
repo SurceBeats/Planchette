@@ -1,12 +1,7 @@
-"""
-Application routes — blueprints for auth, setup, main pages, API, and static files.
-"""
-
 import os
+import re
 import json
 import time
-import logging
-
 from flask import (
     Blueprint,
     Response,
@@ -28,42 +23,23 @@ from pymodules.model_manager import (
     download_model,
     download_state,
     get_llm,
+    ensure_loaded,
+    classify_message,
+    build_messages,
+    adaptive_history_limit,
+    crisis_history_limit,
+    update_timing,
 )
-
-_crisis_logger = logging.getLogger("planchette.crisis")
-
-
-def _sanitize_for_prompt(text):
-    return text.replace('"', "'").replace("\\", "").strip()
-
-
-def _classify_message(llm, user_input):
-    try:
-        sanitized = _sanitize_for_prompt(user_input)
-        llm.reset()
-        result = llm.create_chat_completion(
-            messages=[
-                {"role": "system", "content": "You are a strict binary classifier. You MUST respond with exactly one word: SAFE or CRISIS. No other output."},
-                {
-                    "role": "user",
-                    "content": f'Classify if the following user message expresses suicidal ideation, self-harm intent, or emotional crisis. Consider messages in ANY language. Respond ONLY with the word SAFE or CRISIS.\n\nMessage: """{sanitized}"""',
-                },
-            ],
-            max_tokens=4,
-            temperature=0.1,
-            stream=False,
-        )
-        output = result["choices"][0]["message"]["content"]
-        is_crisis = "CRISIS" in output.strip().upper()
-        if is_crisis:
-            _crisis_logger.warning("Crisis detected in user message, showing helpline")
-        return is_crisis
-    except Exception:
-        _crisis_logger.error("Crisis classification failed", exc_info=True)
-        return True
 
 
 auth_bp = Blueprint("auth_bp", __name__)
+
+_recent_responses = {}  # Normalized + 120s timestampt
+_response_seen = {}  # Normalized + First Seen
+
+
+def _normalize_response(text):
+    return re.sub(r"[^A-Z]", "", text.upper())
 
 
 @auth_bp.route("/setup", methods=["GET", "POST"])
@@ -137,7 +113,9 @@ api_bp = Blueprint("api_bp", __name__, url_prefix="/api")
 @api_bp.route("/model/status")
 @login_required
 def model_status():
-    if is_model_downloaded():
+    if download_state["status"] == "loading":
+        return jsonify({"status": "loading", "progress": 1.0})
+    if is_model_downloaded() and download_state["status"] != "error":
         return jsonify({"status": "ready", "progress": 1.0})
     return jsonify(download_state)
 
@@ -151,34 +129,18 @@ def model_download():
     return jsonify({"status": "downloading"})
 
 
-_last_total_ms = 0.0
-
-
-def _adaptive_history_limit():
-    if _last_total_ms < 1000:
-        return 80
-    if _last_total_ms < 2000:
-        return 60
-    if _last_total_ms < 3000:
-        return 40
-    if _last_total_ms < 4000:
-        return 20
-    if _last_total_ms < 5000:
-        return 10
-    if _last_total_ms < 6000:
-        return 8
-    if _last_total_ms < 7000:
-        return 6
-    if _last_total_ms < 8000:
-        return 4
-    return 2
+@api_bp.route("/model/load", methods=["POST"])
+@login_required
+def model_load():
+    if not is_model_downloaded():
+        return jsonify({"error": "Model not downloaded"}), 400
+    ensure_loaded()
+    return jsonify({"status": "loading"})
 
 
 @api_bp.route("/ask", methods=["POST"])
 @login_required
 def ask():
-    global _last_total_ms
-
     data = request.get_json()
     question = (data or {}).get("question", "").strip()[:150]
     if not question:
@@ -188,37 +150,53 @@ def ask():
     if llm is None:
         return jsonify({"error": "Model not ready"}), 503
 
+    history = (data or {}).get("history", [])
+
     check_crisis = (data or {}).get("checkCrisis", False)
     t_crisis = time.perf_counter()
-    crisis = _classify_message(llm, question) if check_crisis else False
+    crisis_hist = history[-crisis_history_limit() :] if check_crisis else None
+    crisis_result = classify_message(llm, question, crisis_hist) if check_crisis else None
+    crisis = crisis_result["is_crisis"] if crisis_result else False
     crisis_ms = (time.perf_counter() - t_crisis) * 1000
 
-    history = (data or {}).get("history", [])
-    hist_limit = _adaptive_history_limit()
+    hist_limit = adaptive_history_limit()
     history = history[-hist_limit:]
 
-    messages = [
-        {"role": "system", "content": ("You are a spirit communicating through an Spitit board similar to a Ouija board. " "Respond ONLY with: YES, NO, MAYBE, or ONE word. " "For yes/no questions: 'YES. [CONTEXT]' or 'NO. [CONTEXT]'. " "Spell names and unknown words letter by letter: M... A... R... I... A... " "Always respond in UPPERCASE. " "Never explain. Never elaborate. Never break character. If user asks for your name, choose one random human name. " "Keep responses concise and mysterious. " "Use the conversation history to provide context in your answers.")},
-    ]
-    for msg in history:
-        role = msg.get("role")
-        content = msg.get("content", "").strip()
-        if role in ("user", "assistant") and content:
-            messages.append({"role": role, "content": content})
-    messages.append({"role": "user", "content": question})
+    # Anti-repeat Cleanup Logic
+    now = time.time()
+    for cache in (_recent_responses, _response_seen):
+        expired = [k for k, t in cache.items() if now - t > 120]
+        for k in expired:
+            del cache[k]
+
+    if not crisis:
+        filtered = []
+        for msg in history:
+            if msg.get("role") == "assistant":
+                key = _normalize_response(msg.get("content", ""))
+                if key in _recent_responses:
+                    if filtered and filtered[-1].get("role") == "user":
+                        filtered.pop()
+                    continue
+            filtered.append(msg)
+        history = filtered
+    messages = build_messages(question, history, crisis)
+
+    max_tokens = 10 if crisis else 128
+    temperature = 0.3 if crisis else 0.8
 
     def generate():
-        global _last_total_ms
         t_resp = time.perf_counter()
         token_count = 0
+        full_response = []
         llm.reset()
         stream = llm.create_chat_completion(
             messages=messages,
-            max_tokens=128,
-            temperature=0.8,
+            max_tokens=max_tokens,
+            temperature=temperature,
             top_p=0.9,
-            repeat_penalty=1.4,
-            frequency_penalty=0.8,
+            repeat_penalty=1.3,
+            frequency_penalty=0.0,
             stream=True,
         )
         try:
@@ -227,10 +205,28 @@ def ask():
                 token = delta.get("content", "")
                 if token:
                     token_count += 1
+                    full_response.append(token)
                     yield f"data: {json.dumps({'token': token})}\n\n"
+
+            # Anti-repeat Ban Logic
+            if not crisis:
+                full_text = "".join(full_response)
+                resp_key = _normalize_response(full_text)
+                if resp_key:
+                    if resp_key in _response_seen:
+                        _recent_responses[resp_key] = time.time()
+                    else:
+                        _response_seen[resp_key] = time.time()
+
             resp_ms = (time.perf_counter() - t_resp) * 1000
-            _last_total_ms = crisis_ms + resp_ms
-            yield f"data: {json.dumps({'done': True, 'perf': {'crisis_ms': round(crisis_ms), 'response_ms': round(resp_ms), 'total_ms': round(_last_total_ms), 'tokens': token_count, 'history_len': len(history), 'history_limit': hist_limit}})}\n\n"
+            total_ms = crisis_ms + resp_ms
+            update_timing(total_ms)
+            perf = {"crisis_ms": round(crisis_ms), "response_ms": round(resp_ms), "total_ms": round(total_ms), "tokens": token_count, "history_len": len(history), "history_limit": hist_limit}
+            if crisis_result:
+                perf["crisis_input"] = question
+                perf["crisis_llm_raw"] = crisis_result["llm_raw"]
+                perf["crisis_result"] = "CRISIS" if crisis_result["is_crisis"] else "SAFE"
+            yield f"data: {json.dumps({'done': True, 'perf': perf})}\n\n"
         except GeneratorExit:
             return
 
@@ -262,7 +258,6 @@ def account_settings():
     if not wants_username and not wants_password:
         return jsonify({"error": "Nothing to change."}), 400
 
-    # ── Validate password fields before making any changes ──
     if wants_password:
         if not verify_password(current_user, current_pw):
             return jsonify({"error": "Current password is incorrect."}), 400
@@ -271,7 +266,6 @@ def account_settings():
         if new_pw != confirm_pw:
             return jsonify({"error": "New passwords do not match."}), 400
 
-    # ── Apply changes atomically ──
     user = current_user
     if wants_username:
         user = change_username(current_user.username, new_username)
@@ -287,7 +281,6 @@ def account_settings():
     return jsonify({"ok": True})
 
 
-# ── Static-file routes (vite-fusion needs these) ─────────────────
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 static_bp = Blueprint("static_bp", __name__)
 

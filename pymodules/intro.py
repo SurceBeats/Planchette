@@ -56,14 +56,14 @@ def show_banner(host: str, port: int, mode: str, ssl: bool = False):
         lines.append(_line(a))
 
     lines.append(_line())
-    lines.append(_line(f"  {DIM} T A L K I N G   B O A R D{RESET}"))
+    lines.append(_line(f"  {DIM} T H E   T A L K I N G   B O A R D{RESET}"))
     lines.append(_line())
     lines.append(_sep())
     lines.append(_line())
     lines.append(_row(f"{DIM}Server{RESET}", url))
     lines.append(_row(f"{DIM}Mode{RESET}", mode))
     lines.append(_row(f"{DIM}SSL{RESET}", f"\033[92mEnabled\033[0m" if ssl else f"\033[91mDisabled\033[0m"))
-    lines.append(_row(f"{DIM}Model{RESET}", "Ouija-3B (Q4_K_M)"))
+    lines.append(_row(f"{DIM}Model{RESET}", "Ouija2-1.7B (Q4_K_M)"))
     gpu = False
     try:
         from llama_cpp import llama_supports_gpu_offload

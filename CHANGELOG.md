@@ -1,6 +1,32 @@
 # Changelog
 
-## 1.0.28 (Latest)
+## 1.0.30 (Latest)
+
+- Anti-repeat system: two-tier cache (seen + ban) strips repeated spirit responses from conversation context, forcing varied answers without extra inference
+- 120-second response cache with automatic expiry
+- Session PDF export now includes "Download on the App Store" badge (yes, we ported it)
+- Reorganized `model_manager.py`: extracted `_create_llm()` helper, grouped constants, added section headers, removed dead `ctypes` import
+- Moved crisis classification, message building, prompts and adaptive history logic into `model_manager.py`
+- Added `ensure_loaded()` for non-blocking async model loading with "loading" status
+- Model status endpoint now reports `loading` state during initialization
+- Crisis classifier now receives recent conversation history for context-aware detection
+- Crisis perf data (`crisis_input`, `crisis_llm_raw`, `crisis_result`) included in SSE response
+- Expanded crisis keyword list: added body-part and method-specific terms across all 20+ languages
+- Shortened crisis keyword stems for broader fuzzy matching coverage
+- Removed duplicate keywords across language sections
+- Updated About modal: added Banshee Technologies credit, privacy section, GitHub link, license info
+- Updated Disclaimer modal styling and content
+- Switched AI model from Ouija-3B to Ouija2-1.7B (Q4_K_M)
+- Updated model download URL to HuggingFace BansheeTechnologies/Ouija2-1.7B (Apache2)
+- Updated README to reference Ouija2-1.7B with HuggingFace link
+- Added App Store download button to footer
+- Added `cursor-pointer` to footer buttons
+- Added CSS loading spinner for ask button
+- Auto-cleanup of old model files (`.gguf`, `.gguf.part`) before downloading a new version
+- Adjusted inference parameters: `repeat_penalty` 1.4→1.3, `frequency_penalty` 0.8→0.0
+- Added `___PLANCHETTE_IOS___/` to `.gitignore` (used just for RN porting schedule)
+
+## 1.0.28
 
 - Canvas-based poltergeist effects overlay on the spirit board (5% chance per response)
 - Smoke wisps: semi-transparent amber particles drift upward with sinusoidal wobble
@@ -12,8 +38,6 @@
 - 60fps rendering via requestAnimationFrame with automatic cleanup
 - DPI-aware canvas scaling for sharp rendering on retina displays
 
----
-
 ## 1.0.26
 
 - Fixed iOS Safari auto-zoom on chat input focus (font-size bumped to 16px on mobile)
@@ -24,8 +48,6 @@
 - Renamed anger.mp3 to no01.mp3
 - YES glow effect probability increased from 10% to 20% (matches NO shake)
 - MAYBE flicker effect probability adjusted from 40% to 20% (matches NO/YES)
-
----
 
 ## 1.0.24
 

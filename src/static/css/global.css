@@ -507,6 +507,22 @@
   animation: subtitleFadeIn 1.5s ease-out 2s forwards;
 }
 
+/* ── Loading spinner ──────────── */
+@keyframes askSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ask-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(253, 230, 138, 0.2);
+  border-top-color: rgba(253, 230, 138, 0.8);
+  border-radius: 50%;
+  animation: askSpinner 0.8s linear infinite;
+}
+
 @keyframes letterReveal {
   0% {
     opacity: 0;

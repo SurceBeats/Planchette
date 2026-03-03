@@ -3,7 +3,7 @@ import AboutModal from "./AboutModal";
 import DisclaimerModal from "./DisclaimerModal";
 import SettingsModal from "./SettingsModal";
 import Footer from "./Footer";
-import { shouldCheckCrisis } from "./CrisisTrigger";
+import { shouldCheckCrisis, hasKeywordMatch, markCrisisDetected } from "./CrisisTrigger";
 import PoltergeistCanvas from "./PoltergeistCanvas";
 
 const BOARD_ITEMS = (() => {
@@ -106,7 +106,8 @@ export default function PlanchetteBoard() {
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState([]);
   const [showAbout, setShowAbout] = useState(false);
-  const [showDisclaimer, setShowDisclaimer] = useState(() => localStorage.getItem("__disclaimerShown") !== "true");
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => localStorage.getItem("__disclaimerAccepted") === "true");
   const [showSettings, setShowSettings] = useState(false);
   const [started, setStarted] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
@@ -132,9 +133,55 @@ export default function PlanchetteBoard() {
   const [showHelpline, setShowHelpline] = useState(false);
   const historyLimitRef = useRef(80);
   const DEBUG = false;
-  const [debugPerf, setDebugPerf] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [verboseLog, setVerboseLog] = useState(false);
+  const verboseLogRef = useRef(false);
+  const [debugInfo, setDebugInfo] = useState({
+    lastCrisisInput: "",
+    lastCrisisLlmRaw: "",
+    lastCrisisResult: "",
+    lastResponseMs: 0,
+    lastTokens: 0,
+    lastHistoryLen: 0,
+    lastHistoryLimit: 0,
+  });
 
   const crisisRef = useRef(false);
+  const [askTapped, setAskTapped] = useState(false);
+  const askRevertTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!busy) {
+      setAskTapped(false);
+      if (askRevertTimerRef.current) {
+        clearTimeout(askRevertTimerRef.current);
+        askRevertTimerRef.current = null;
+      }
+    }
+  }, [busy]);
+
+  const handleStop = useCallback(() => {
+    if (abortRef.current) abortRef.current.abort();
+    animQueueRef.current = [];
+    animatingRef.current = false;
+    setBusy(false);
+    setWaiting(false);
+  }, []);
+
+  const handleBusyTap = useCallback(() => {
+    if (!askTapped) {
+      setAskTapped(true);
+      if (askRevertTimerRef.current) clearTimeout(askRevertTimerRef.current);
+      askRevertTimerRef.current = setTimeout(() => setAskTapped(false), 3000);
+    } else {
+      if (askRevertTimerRef.current) {
+        clearTimeout(askRevertTimerRef.current);
+        askRevertTimerRef.current = null;
+      }
+      handleStop();
+      setAskTapped(false);
+    }
+  }, [askTapped, handleStop]);
 
   const questionQueueRef = useRef([]);
   const processingRef = useRef(false);
@@ -173,6 +220,10 @@ export default function PlanchetteBoard() {
 
   const startSession = useCallback(() => {
     if (started || transitioning) return;
+    if (!disclaimerAccepted) {
+      setShowDisclaimer(true);
+      return;
+    }
     setTransitioning(true);
     if (audioRef.current && audioRef.current.paused) {
       audioRef.current.play().catch(() => {});
@@ -181,7 +232,7 @@ export default function PlanchetteBoard() {
       interactRef.current.currentTime = 0;
       interactRef.current.play().catch(() => {});
     }
-  }, [started, transitioning]);
+  }, [started, transitioning, disclaimerAccepted]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -209,13 +260,26 @@ export default function PlanchetteBoard() {
     fetch("/api/model/status")
       .then((r) => r.json())
       .then((d) => {
-        const status = d.status === "ready" ? "ready" : d.status === "downloading" ? "downloading" : "idle";
-        setModelStatus(status);
+        const status = d.status === "ready" ? "ready" : d.status === "downloading" ? "downloading" : d.status === "loading" ? "loading" : "idle";
         setDownloadProgress(d.progress || 0);
-        if (status === "downloading") startPolling();
+        if (status === "downloading" || status === "loading") {
+          setModelStatus(status);
+          startPolling();
+        } else if (status === "idle") {
+          fetch("/api/model/download", { method: "POST" });
+          setModelStatus("downloading");
+          startPolling();
+        } else if (status === "ready") {
+          loadTriggeredRef.current = true;
+          fetch("/api/model/load", { method: "POST" });
+          setModelStatus("loading");
+          startPolling();
+        }
       })
       .catch(() => setModelStatus("idle"));
   }, []);
+
+  const loadTriggeredRef = useRef(false);
 
   const startPolling = useCallback(() => {
     if (pollingRef.current) return;
@@ -223,9 +287,17 @@ export default function PlanchetteBoard() {
       try {
         const r = await fetch("/api/model/status");
         const d = await r.json();
-        setModelStatus(d.status);
+        let status = d.status === "ready" ? "ready" : d.status === "downloading" ? "downloading" : d.status === "loading" ? "loading" : d.status === "error" ? "error" : d.status;
+
+        if (status === "ready" && !loadTriggeredRef.current) {
+          loadTriggeredRef.current = true;
+          fetch("/api/model/load", { method: "POST" });
+          status = "loading";
+        }
+
+        setModelStatus(status);
         setDownloadProgress(d.progress || 0);
-        if (d.status === "ready" || d.status === "error") {
+        if (status === "ready" || status === "error") {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
         }
@@ -254,6 +326,8 @@ export default function PlanchetteBoard() {
   const afterEllipsisRef = useRef(false);
   const hasEmittedRef = useRef(false);
   const needsDotSepRef = useRef(false);
+  const pendingBreakRef = useRef(false);
+  const pendingMatchRef = useRef(null);
   const wordBufRef = useRef("");
 
   const moveTo = useCallback((key) => {
@@ -381,11 +455,14 @@ export default function PlanchetteBoard() {
       afterEllipsisRef.current = false;
       hasEmittedRef.current = false;
       needsDotSepRef.current = false;
+      pendingBreakRef.current = false;
+      pendingMatchRef.current = null;
       wordBufRef.current = "";
       crisisRef.current = false;
 
       const controller = new AbortController();
       abortRef.current = controller;
+      let verboseTokenCount = 0;
 
       if (waitTimerRef.current) clearTimeout(waitTimerRef.current);
       waitTimerRef.current = setTimeout(() => setWaiting(true), 150);
@@ -402,22 +479,66 @@ export default function PlanchetteBoard() {
           history,
           onCrisis() {
             crisisRef.current = true;
+            if (hasKeywordMatch(q)) markCrisisDetected();
             setShowHelpline(true);
           },
-          onToken(token) {
+          onToken(token, fullAnswer) {
+            verboseTokenCount++;
+            if (verboseLogRef.current) console.log(`[TOKEN ${verboseTokenCount}] "${token}"`);
             if (waitTimerRef.current) {
               clearTimeout(waitTimerRef.current);
               waitTimerRef.current = null;
               if (Math.random() < 0.05) setPoltergeistTrigger((n) => n + 1);
             }
             setWaiting(false);
-            const clean = cleanToken(token);
 
+            const clean = cleanToken(token);
+            const stripped = token.replace(/\.\.\./g, "");
+            const hasLeadingSep = /^[\s.]/.test(stripped);
+
+            if (pendingMatchRef.current) {
+              const pending = pendingMatchRef.current;
+              pendingMatchRef.current = null;
+
+              if (!clean || hasLeadingSep) {
+                if (pending.word === "NO" && Math.random() < 0.2) triggerEffect("shake", 7000);
+                else if (pending.word === "YES" && Math.random() < 0.2) triggerEffect("glow", 5000);
+                else if (pending.word === "MAYBE" && Math.random() < 0.2) triggerEffect("flicker", 1500);
+                else if (pending.word === "GOODBYE") triggerEffect("fadeout", 2500);
+
+                const matchPrefix = [];
+                if (needsDotSepRef.current) {
+                  matchPrefix.push("_DOT", "_BREAK");
+                  needsDotSepRef.current = false;
+                } else if (pending.shouldBreak) {
+                  matchPrefix.push("_BREAK");
+                }
+                hasEmittedRef.current = true;
+                needsDotSepRef.current = pending.word !== "GOODBYE";
+                enqueueAnim([...matchPrefix, pending.word]);
+              } else {
+                wordBufRef.current = pending.word;
+                if (pending.shouldBreak) pendingBreakRef.current = true;
+              }
+            }
+
+            // Separators
             if (!clean) {
               if (wordBufRef.current) {
                 const flushed = lettersOf(wordBufRef.current);
                 wordBufRef.current = "";
-                if (flushed.length) enqueueAnim(flushed);
+                if (flushed.length) {
+                  const sepPrefix = [];
+                  if (needsDotSepRef.current) {
+                    sepPrefix.push("_DOT", "_BREAK");
+                    needsDotSepRef.current = false;
+                  } else if (needsBreakRef.current) {
+                    sepPrefix.push("_BREAK");
+                    needsBreakRef.current = false;
+                  }
+                  hasEmittedRef.current = true;
+                  enqueueAnim([...sepPrefix, ...flushed]);
+                }
               }
               if (token.includes("...")) {
                 afterEllipsisRef.current = true;
@@ -429,45 +550,48 @@ export default function PlanchetteBoard() {
               return;
             }
 
-            const stripped = token.replace(/\.\.\./g, "");
-            const hasLeadingSpace = /^\s/.test(stripped);
-            const shouldBreak = needsBreakRef.current || (hasLeadingSpace && hasEmittedRef.current && !afterEllipsisRef.current);
+            // Content
+            const tokenHasBreak = hasLeadingSep && hasEmittedRef.current && !afterEllipsisRef.current;
+            const shouldBreak = pendingBreakRef.current || needsBreakRef.current || tokenHasBreak;
 
-            if (shouldBreak && wordBufRef.current) {
+            if (tokenHasBreak && wordBufRef.current) {
               const flushed = lettersOf(wordBufRef.current);
               wordBufRef.current = "";
-              if (flushed.length) enqueueAnim(flushed);
+              if (flushed.length) {
+                const flushPrefix = [];
+                if (needsDotSepRef.current) {
+                  flushPrefix.push("_DOT", "_BREAK");
+                  needsDotSepRef.current = false;
+                } else {
+                  flushPrefix.push("_BREAK");
+                }
+                hasEmittedRef.current = true;
+                enqueueAnim([...flushPrefix, ...flushed]);
+              }
             }
 
             wordBufRef.current += clean;
             const buf = wordBufRef.current;
 
+            // Wait
             const matchedWord = BOARD_WORDS.find((w) => buf === w);
             if (matchedWord) {
               wordBufRef.current = "";
-              needsBreakRef.current = false;
+              pendingBreakRef.current = false;
+              pendingMatchRef.current = { word: matchedWord, shouldBreak };
+              needsBreakRef.current = /[\s.]$/.test(stripped);
               afterEllipsisRef.current = false;
-
-              if (matchedWord === "NO" && Math.random() < 0.2) triggerEffect("shake", 7000);
-              else if (matchedWord === "YES" && Math.random() < 0.2) triggerEffect("glow", 5000);
-              else if (matchedWord === "MAYBE" && Math.random() < 0.2) triggerEffect("flicker", 1500);
-              else if (matchedWord === "GOODBYE") triggerEffect("fadeout", 2500);
-
-              const targets = [matchedWord];
-              hasEmittedRef.current = true;
-              needsDotSepRef.current = matchedWord !== "GOODBYE";
-              if (shouldBreak) {
-                enqueueAnim(["_BREAK", ...targets]);
-              } else {
-                enqueueAnim(targets);
-              }
               return;
             }
 
             const couldMatch = BOARD_WORDS.some((w) => w.startsWith(buf));
-            if (couldMatch) return;
+            if (couldMatch) {
+              if (shouldBreak) pendingBreakRef.current = true;
+              return;
+            }
 
             wordBufRef.current = "";
+            pendingBreakRef.current = false;
             const targets = lettersOf(buf);
             if (!targets.length) return;
 
@@ -479,19 +603,65 @@ export default function PlanchetteBoard() {
               prefix.push("_BREAK");
             }
 
-            needsBreakRef.current = false;
+            needsBreakRef.current = /[\s.]$/.test(stripped);
             afterEllipsisRef.current = false;
             hasEmittedRef.current = true;
 
             enqueueAnim([...prefix, ...targets]);
           },
-          onDone(_, perf) {
+          onDone(fullAnswer, perf) {
+            if (verboseLogRef.current) console.log(`[RAW OUTPUT] "${fullAnswer}"`);
             if (perf?.history_limit) historyLimitRef.current = perf.history_limit;
-            if (perf) setDebugPerf(perf);
+            if (DEBUG && perf) {
+              setDebugInfo((prev) => ({
+                ...prev,
+                lastResponseMs: perf.response_ms,
+                lastTokens: perf.tokens,
+                lastHistoryLen: perf.history_len,
+                lastHistoryLimit: perf.history_limit,
+                ...(perf.crisis_input !== undefined
+                  ? {
+                      lastCrisisInput: perf.crisis_input,
+                      lastCrisisLlmRaw: perf.crisis_llm_raw,
+                      lastCrisisResult: perf.crisis_result,
+                    }
+                  : {}),
+              }));
+            }
+            // Confirm
+            if (pendingMatchRef.current) {
+              const pending = pendingMatchRef.current;
+              pendingMatchRef.current = null;
+              if (pending.word === "NO" && Math.random() < 0.2) triggerEffect("shake", 7000);
+              else if (pending.word === "YES" && Math.random() < 0.2) triggerEffect("glow", 5000);
+              else if (pending.word === "MAYBE" && Math.random() < 0.2) triggerEffect("flicker", 1500);
+              else if (pending.word === "GOODBYE") triggerEffect("fadeout", 2500);
+              const matchPrefix = [];
+              if (needsDotSepRef.current) {
+                matchPrefix.push("_DOT", "_BREAK");
+                needsDotSepRef.current = false;
+              } else if (pending.shouldBreak) {
+                matchPrefix.push("_BREAK");
+              }
+              hasEmittedRef.current = true;
+              needsDotSepRef.current = pending.word !== "GOODBYE";
+              enqueueAnim([...matchPrefix, pending.word]);
+            }
             if (wordBufRef.current) {
               const remaining = lettersOf(wordBufRef.current);
               wordBufRef.current = "";
-              if (remaining.length) enqueueAnim(remaining);
+              if (remaining.length) {
+                const endPrefix = [];
+                if (needsDotSepRef.current) {
+                  endPrefix.push("_DOT", "_BREAK");
+                  needsDotSepRef.current = false;
+                } else if (needsBreakRef.current) {
+                  endPrefix.push("_BREAK");
+                  needsBreakRef.current = false;
+                }
+                hasEmittedRef.current = true;
+                enqueueAnim([...endPrefix, ...remaining]);
+              }
             }
             if (hasEmittedRef.current) enqueueAnim(["_DOT"]);
             const waitForAnim = () => {
@@ -550,7 +720,7 @@ export default function PlanchetteBoard() {
     if (modelStatus === "ready") {
       processNextQuestion();
     } else {
-      if (modelStatus !== "downloading") {
+      if (modelStatus !== "downloading" && modelStatus !== "loading") {
         fetch("/api/model/download", { method: "POST" });
         setModelStatus("downloading");
       }
@@ -558,27 +728,60 @@ export default function PlanchetteBoard() {
     }
   }, [question, modelStatus, processNextQuestion, startPolling]);
 
-  const exportMarkdown = useCallback(() => {
+  const exportPDF = useCallback(async () => {
     const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    let md = `# Planchette - The Talking Board — Session Log\n\n`;
-    md += `**Date:** ${date}  \n`;
-    md += `**Model:** Ouija-3B\n\n---\n\n`;
+    const acceptedISO = localStorage.getItem("__disclaimerAcceptedDate");
+    const acceptedStr = acceptedISO ? new Date(acceptedISO).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Unknown";
+    const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+
+    let logoB64 = "";
+    let badgeB64 = "";
+    try {
+      const [logoResp, badgeResp] = await Promise.all([fetch("/__data__/logoSmall.png"), fetch("/__data__/appstore.png")]);
+      const [logoBlob, badgeBlob] = await Promise.all([logoResp.blob(), badgeResp.blob()]);
+      const toB64 = (blob) =>
+        new Promise((resolve) => {
+          const r = new FileReader();
+          r.onloadend = () => resolve(r.result);
+          r.readAsDataURL(blob);
+        });
+      [logoB64, badgeB64] = await Promise.all([toB64(logoBlob), toB64(badgeBlob)]);
+    } catch {}
+
+    let rows = "";
     for (const entry of log) {
+      const safe = esc(entry.text);
       if (entry.role === "user") {
-        md += `**You:** ${entry.text}\n\n`;
-      } else if (entry.crisis) {
-        md += `**Spirit:** ${entry.text} *(crisis alert triggered — helpline shown: [findahelpline.com](https://findahelpline.com))*\n\n`;
+        rows += `<div style="margin-bottom:4px;"><span style="color:#888;">You:</span> ${safe}</div>`;
       } else {
-        md += `**Spirit:** ${entry.text}\n\n`;
+        rows += `<div style="margin-bottom:12px;"><span style="color:#b45309;">Spirit:</span> <span style="letter-spacing:1px;">${safe}</span></div>`;
       }
     }
-    const blob = new Blob([md], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `planchette-session-${new Date().toISOString().slice(0, 10)}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    const logoImg = logoB64 ? `<img src="${logoB64}" style="width:48px;height:48px;border-radius:10px;display:block;margin:0 auto 12px;" />` : "";
+    const dateSlug = new Date().toISOString().split("T")[0];
+    const hash = Math.random().toString(36).substring(2, 10);
+    const html = `<html><head><title>Planchette-Session-${dateSlug}-${hash}</title></head><body style="font-family:Georgia,serif;padding:32px;color:#222;">
+      ${logoImg}
+      <h1 style="font-size:22px;letter-spacing:4px;text-align:center;margin:0;">PLANCHETTE</h1>
+      <p style="text-align:center;color:#555;font-size:11px;letter-spacing:3px;margin-top:4px;">THE TALKING BOARD — SESSION LOG</p>
+      <p style="text-align:center;color:#999;font-size:9px;letter-spacing:2px;margin-top:2px;">SELF-HOSTED EDITION</p>
+      <p style="color:#444;font-size:12px;">Date: ${date}</p>
+      <p style="color:#444;font-size:12px;">Disclaimer accepted: ${acceptedStr}</p>
+      <hr style="border:none;border-top:1px solid #ddd;margin:16px 0;">
+      ${rows}
+      <hr style="border:none;border-top:1px solid #ddd;margin:16px 0;">
+      <p style="color:#aaa;font-size:9px;text-align:center;">Generated by Planchette — AI Spirit Talking Board</p>
+      ${badgeB64 ? `<div style="text-align:center;margin-top:16px;"><a href="https://apps.apple.com/us/app/planchette-the-talking-board/id6759858464"><img src="${badgeB64}" style="height:36px;" alt="Download on the App Store" /></a></div>` : ""}
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.onafterprint = () => w.close();
+      setTimeout(() => w.print(), 300);
+    }
   }, [log]);
 
   const handleKeyDown = (e) => {
@@ -588,22 +791,8 @@ export default function PlanchetteBoard() {
     }
   };
 
-  const isDownloading = modelStatus === "downloading";
-
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col items-center select-none px-3 sm:px-4 relative">
-      {DEBUG && debugPerf && (
-        <div className="fixed top-2 left-2 z-50 bg-black/80 border border-amber-900/40 rounded-lg px-3 py-2 font-mono text-[11px] text-amber-300/70 leading-relaxed">
-          <div className="text-amber-500/90 font-bold mb-1">PERFORMANCE</div>
-          <div>Crisis: {debugPerf.crisis_ms}ms</div>
-          <div>Response: {debugPerf.response_ms}ms</div>
-          <div>Total: {debugPerf.total_ms}ms</div>
-          <div>Tokens: {debugPerf.tokens}</div>
-          <div>
-            History: {debugPerf.history_len}/{debugPerf.history_limit}
-          </div>
-        </div>
-      )}
       <button onClick={() => setShowSettings(true)} className="absolute top-3 right-3 p-2 rounded-lg text-amber-200/30 hover:text-amber-200/70 hover:bg-amber-200/10 transition-colors z-10" title="Settings">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
@@ -611,10 +800,62 @@ export default function PlanchetteBoard() {
         </svg>
       </button>
 
-      <div className="flex items-center gap-2 mt-4">
+      <div className="flex items-center gap-2 mt-4 relative w-full justify-center">
         <img src="/__data__/logoSmall.png" alt="" className="h-7 sm:h-9 opacity-80 smoke-text" />
         <h1 className="text-2xl sm:text-3xl font-serif tracking-widest text-amber-200/80 uppercase smoke-text">Planchette</h1>
+        {DEBUG && (
+          <button onClick={() => setShowDebug((v) => !v)} className="absolute left-0 p-1 text-amber-200/30 opacity-50 hover:opacity-100 transition-opacity" title="Debug">
+            <span className="text-lg">&#9881;</span>
+          </button>
+        )}
       </div>
+
+      {showDebug && (
+        <div className="w-full max-w-2xl bg-black/85 border border-amber-200/20 rounded-lg p-2.5 mb-2 font-mono text-[10px] text-amber-200/80 leading-relaxed">
+          <div className="text-[11px] font-bold text-amber-400 mb-0.5">Debug</div>
+          <div>
+            Last response: {debugInfo.lastResponseMs}ms / {debugInfo.lastTokens} tokens
+          </div>
+          <div>
+            History: {debugInfo.lastHistoryLen}/{debugInfo.lastHistoryLimit}
+          </div>
+          {debugInfo.lastCrisisInput !== "" && (
+            <>
+              <div className="text-[11px] font-bold text-amber-400 mt-1 mb-0.5">Crisis Classifier</div>
+              <div>Input: {debugInfo.lastCrisisInput}</div>
+              <div>LLM raw: &quot;{debugInfo.lastCrisisLlmRaw}&quot;</div>
+              <div>Result: {debugInfo.lastCrisisResult}</div>
+            </>
+          )}
+          <label className="flex items-center gap-1.5 mt-1 mb-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={verboseLog}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setVerboseLog(next);
+                verboseLogRef.current = next;
+              }}
+              className="w-3.5 h-3.5 accent-amber-600 rounded"
+            />
+            <span>Token logging</span>
+          </label>
+          <div className="flex gap-2 mt-1.5">
+            <button
+              onClick={() => {
+                setLog([]);
+                setRevealedLetters([]);
+              }}
+              className="px-2.5 py-1 border border-amber-200/30 rounded text-amber-400 hover:bg-amber-900/30 transition-colors"
+            >
+              Clear Session
+            </button>
+            <button onClick={handleStop} className="px-2.5 py-1 border border-red-500/40 rounded text-red-500 hover:bg-red-900/20 transition-colors">
+              Stop
+            </button>
+          </div>
+        </div>
+      )}
       <p className="text-[10px] mb-4 sm:text-xs sm:mb-4 tracking-[0.3em] text-amber-200/30 uppercase subtitle-fade">The Talking Board</p>
 
       <div className={`relative w-full max-w-2xl aspect-[4/3] mx-auto cursor-pointer ${transitioning ? "board-awaken" : ""} ${boardEffect === "shake" ? "board-shake" : ""} ${boardEffect === "glow" ? "board-glow" : ""} ${boardEffect === "flicker" ? "board-flicker" : ""} ${boardEffect === "fadeout" ? "board-fadeout" : ""}`} onClick={!started && !transitioning ? startSession : undefined}>
@@ -624,7 +865,7 @@ export default function PlanchetteBoard() {
 
         {!started && (
           <div
-            className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-black/40 backdrop-blur-[2px] ${transitioning ? "overlay-dissolve" : ""}`}
+            className={`absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-black/60 backdrop-blur-[2px] ${transitioning ? "overlay-dissolve" : ""}`}
             onAnimationEnd={() => {
               if (transitioning) {
                 setStarted(true);
@@ -632,8 +873,48 @@ export default function PlanchetteBoard() {
               }
             }}
           >
-            <p className="text-amber-200/60 text-xs sm:text-sm tracking-widest uppercase animate-pulse">Click on the board to begin</p>
-            <p className="text-amber-200/20 text-xs tracking-wider mt-2">the spirits await</p>
+            <img src="/__data__/logoSmall.png" alt="" className="h-12 sm:h-16 opacity-70 mb-3" />
+            <h2 className="text-xl sm:text-2xl font-serif tracking-widest text-amber-200/80 uppercase">Planchette</h2>
+            <p className="text-[10px] sm:text-xs tracking-[0.3em] text-amber-200/30 uppercase mt-1 mb-6">The Talking Board</p>
+
+            {(modelStatus === "checking" || modelStatus === "idle") && <p className="text-amber-200/40 text-xs sm:text-sm tracking-widest uppercase animate-pulse">Preparing...</p>}
+
+            {modelStatus === "downloading" && (
+              <div className="text-center space-y-2 w-3/4">
+                <p className="text-amber-200/50 text-xs sm:text-sm">Summoning the spirits... {Math.round(downloadProgress * 100)}%</p>
+                <div className="w-48 sm:w-64 mx-auto progress-track">
+                  <div className="progress-fill" style={{ width: `${downloadProgress * 100}%` }} />
+                </div>
+              </div>
+            )}
+
+            {modelStatus === "loading" && (
+              <div className="text-center space-y-2">
+                <p className="text-amber-200/50 text-xs sm:text-sm animate-pulse">Awakening the spirits...</p>
+              </div>
+            )}
+
+            {modelStatus === "ready" && (
+              <button onClick={startSession} className="px-8 py-2.5 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 text-sm tracking-widest uppercase transition-colors">
+                Begin Session
+              </button>
+            )}
+
+            {modelStatus === "error" && (
+              <div className="text-center space-y-3">
+                <p className="text-red-400/70 text-xs sm:text-sm">The spirits could not be reached.</p>
+                <button
+                  onClick={() => {
+                    fetch("/api/model/download", { method: "POST" });
+                    setModelStatus("downloading");
+                    startPolling();
+                  }}
+                  className="px-6 py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-900/30 rounded-lg text-amber-200/60 text-sm transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -684,7 +965,7 @@ export default function PlanchetteBoard() {
       </div>
 
       {started && revealedLetters.length > 0 && (
-        <div className="text-sm mt-2 sm:text-lg sm:mt-4 px-6 py-3 max-w-2xl text-center font-mono tracking-[0.05em] flex flex-wrap justify-center">
+        <div className="text-sm mt-2 sm:text-lg mt-4 px-6 py-1 max-w-2xl text-center font-mono tracking-[0.05em] flex flex-wrap justify-center">
           {revealedLetters.map((item) =>
             item.key === "_BREAK" ? (
               <span key={item.id} className="inline-block w-5" />
@@ -701,24 +982,19 @@ export default function PlanchetteBoard() {
         </div>
       )}
 
-      {isDownloading && (
-        <div className="mt-4 text-center space-y-2">
-          <p className="text-amber-200/50 text-sm">Summoning the spirits… {Math.round(downloadProgress * 100)}%</p>
-          <div className="w-48 sm:w-64 mx-auto progress-track">
-            <div className="progress-fill" style={{ width: `${downloadProgress * 100}%` }} />
-          </div>
-        </div>
-      )}
-
-      {modelStatus === "error" && <p className="mt-4 text-red-400 text-sm">The spirits could not be reached. Try again.</p>}
-
       {started && (
-        <div className="mt-6 mb-8 w-full max-w-2xl ui-slide-in">
+        <div className="mt-4 mb-8 w-full max-w-2xl ui-slide-in">
           <div className="flex gap-3">
             <input type="text" value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 150))} onKeyDown={handleKeyDown} maxLength={150} placeholder={busy ? "The spirits are speaking…" : "Ask the spirits…"} className="flex-1 min-w-0 text-base py-2.5 px-3 sm:py-3 sm:px-4 bg-neutral-900 border border-amber-900/30 rounded-lg text-amber-100 placeholder-amber-200/20 outline-none focus:border-amber-700/60 transition-colors" />
-            <button onClick={handleAsk} disabled={!question.trim() || busy} className="px-4 text-base sm:px-6 py-3 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-              {busy ? "…" : "Ask"}
-            </button>
+            {busy ? (
+              <button onClick={handleBusyTap} className={`w-[60px] flex items-center justify-center py-3 border rounded-lg transition-colors ${askTapped ? "bg-red-500/25 border-red-500/40" : "bg-amber-900/40 border-amber-900/40"}`}>
+                {askTapped ? <span className="text-red-500 text-[13px] font-semibold">Stop</span> : <div className="ask-spinner" />}
+              </button>
+            ) : (
+              <button onClick={handleAsk} disabled={!question.trim()} className="w-[60px] text-base py-3 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                Ask
+              </button>
+            )}
           </div>
 
           {showHelpline && (
@@ -799,8 +1075,8 @@ export default function PlanchetteBoard() {
                   ));
                 })()}
               </div>
-              <button onClick={exportMarkdown} className="mt-3 text-[10px] sm:text-xs text-amber-200/20 hover:text-amber-200/50 transition-colors">
-                Export as Markdown
+              <button onClick={exportPDF} className="mt-3 w-full py-2 rounded-lg border border-amber-900/30 bg-amber-900/20 text-[11px] sm:text-xs text-amber-200/40 hover:text-amber-200/60 hover:bg-amber-900/30 transition-colors cursor-pointer">
+                Export this Session
               </button>
             </>
           )}
@@ -812,9 +1088,12 @@ export default function PlanchetteBoard() {
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
       {showDisclaimer && (
         <DisclaimerModal
+          mandatory={!disclaimerAccepted}
           onClose={() => {
             setShowDisclaimer(false);
-            localStorage.setItem("__disclaimerShown", "true");
+            if (localStorage.getItem("__disclaimerAccepted") === "true") {
+              setDisclaimerAccepted(true);
+            }
           }}
         />
       )}
