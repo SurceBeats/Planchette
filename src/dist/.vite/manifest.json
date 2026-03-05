@@ -1,6 +1,6 @@
 {
   "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js": {
-    "file": "assets/planchette-CifD79Qc3r4r.js",
+    "file": "assets/planchette-DuyMJucbFLfn.js",
     "name": "react-pdf.browser",
     "src": "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js",
     "isDynamicEntry": true,
@@ -21,7 +21,7 @@
     ]
   },
   "src/static/js/__main__.ts": {
-    "file": "assets/planchette-n-ggZzvw23zw.js",
+    "file": "assets/planchette-DS2htSznRJBO.js",
     "name": "__main__",
     "src": "src/static/js/__main__.ts",
     "isEntry": true,

@@ -9,7 +9,7 @@ export default function Footer({ onAbout, onDisclaimer }) {
         </a>
       </div>
       <p className="text-[11px] text-amber-200/25 text-center flex flex-wrap items-center justify-center gap-x-1.5">
-        <span>v1.0.32</span>
+        <span>v1.0.34</span>
         <span>|</span>
         <button onClick={onAbout} className="hover:text-amber-200/50 transition-colors cursor-pointer">
           About Planchette

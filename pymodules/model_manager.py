@@ -131,8 +131,9 @@ def _create_llm():
     try:
         return Llama(
             model_path=MODEL_PATH,
-            n_ctx=4096,
+            n_ctx=2048,
             n_threads=max(1, os.cpu_count() - 1) if os.cpu_count() else 2,
+            flash_attn=True,
             verbose=False,
         )
     finally:

@@ -182,7 +182,7 @@ def ask():
         history = filtered
     messages = build_messages(question, history, crisis)
 
-    max_tokens = 10 if crisis else 128
+    max_tokens = 10 if crisis else 33
     temperature = 0.3 if crisis else 0.8
 
     def generate():

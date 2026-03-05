@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.0.32 (Latest)
+## 1.0.34 (Latest)
+
+- Reduced context window from 4096 to 2048 tokens, halves KV cache memory (~200MB → ~100MB), faster prompt processing; 2048 covers worst-case real usage (~1300 tokens) with margin
+- Reduced max generation tokens from 128 to 33 (ordo ab chao) for normal responses, limits worst-case generation time to ~1/4; spirit responses rarely exceed 21 tokens even in longest spelling cases
+- Enabled Flash Attention (`flash_attn=True`), this is for same output, less memory, faster inference; benefits GPU (CUDA/Metal) most, safe on CPU-only
+
+## 1.0.32
 
 - Real PDF export: replaced `window.open()` + `window.print()` with `@react-pdf/renderer` for actual `.pdf` file generation that works on mobile Safari/Chrome
 - PDF lazy-loaded via dynamic `import()` — only fetched when user taps Export
