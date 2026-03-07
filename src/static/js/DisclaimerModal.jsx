@@ -90,26 +90,25 @@ export default function DisclaimerModal({ onClose, mandatory }) {
               Need to talk to someone? Find a helpline
             </a>
           </div>
+          {mandatory ? (
+            <div className="mt-4 pt-4 border-t border-amber-900/20 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 accent-amber-600 w-4 h-4 shrink-0" />
+                <span className="text-xs text-amber-200/50 leading-relaxed">I have read and understand all of the above</span>
+              </label>
+              <button onClick={handleAccept} disabled={!accepted} className="w-full py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-900/30 rounded-lg text-amber-200/60 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                I Understand & Accept
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 pt-4 border-t border-amber-900/20 space-y-3">
+              {acceptedDate && <p className="text-[10px] text-amber-200/30 text-center">Accepted on: {new Date(acceptedDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>}
+              <button onClick={handleClose} className="w-full py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-900/30 rounded-lg text-amber-200/60 text-sm transition-colors">
+                Close
+              </button>
+            </div>
+          )}
         </div>
-
-        {mandatory ? (
-          <div className="mt-6 space-y-3 shrink-0">
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 accent-amber-600 w-4 h-4 shrink-0" />
-              <span className="text-xs text-amber-200/50 leading-relaxed">I have read and understand all of the above</span>
-            </label>
-            <button onClick={handleAccept} disabled={!accepted} className="w-full py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-900/30 rounded-lg text-amber-200/60 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-              I Understand & Accept
-            </button>
-          </div>
-        ) : (
-          <div className="mt-6 space-y-3 shrink-0">
-            {acceptedDate && <p className="text-[10px] text-amber-200/30 text-center">Accepted on: {new Date(acceptedDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>}
-            <button onClick={handleClose} className="w-full py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-900/30 rounded-lg text-amber-200/60 text-sm transition-colors">
-              Close
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

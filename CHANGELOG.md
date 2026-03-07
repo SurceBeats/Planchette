@@ -1,6 +1,15 @@
 # Changelog
 
-## 1.0.34 (Latest)
+## 1.1.24 (Latest)
+
+- New board, ornate double inner border, warm vignette gradient overlay
+- Added board decorative SVG elements: sun symbol (top-left), moon crescent (top-right), star accents, corner ornaments, diamond separator, scroll flourishes near GOODBYE, decorative arc and accent stars
+- Added detailed and realistic wood-textured planchette, vector with 5 color layers, crystal viewing hole mask, and brass ring accents, replaces the old simple teardrop SVG
+- Made planchette size responsive (percentage-based width relative to board) instead of fixed pixel dimensions
+- Updated board letter styling to match iOS: warm amber text color (`rgba(253, 230, 138, 0.65)`) with subtle text shadow, brighter active glow (`#fcd34d` with 18px amber shadow)
+- Moved disclaimer acceptance checkbox and button inside the scrollable content area, ensuring users must scroll through the full disclaimer before accepting
+
+## 1.0.34
 
 - Reduced context window from 4096 to 2048 tokens, halves KV cache memory (~200MB → ~100MB), faster prompt processing; 2048 covers worst-case real usage (~1300 tokens) with margin
 - Reduced max generation tokens from 128 to 33 (ordo ab chao) for normal responses, limits worst-case generation time to ~1/4; spirit responses rarely exceed 21 tokens even in longest spelling cases
