@@ -7,7 +7,7 @@ const DURATION = 2000;
 //   s    = scale factor (1.0 at ~500px tall, ~0.5 on small mobile)
 
 // --- Effect 1: Smoke Wisps ---
-function smokeWisps(ctx, w, h, progress, s) {
+function smokeWisps(ctx, w, h, progress, s, cP, cS) {
   const count = 25;
   for (let i = 0; i < count; i++) {
     const seed = i / count;
@@ -20,9 +20,9 @@ function smokeWisps(ctx, w, h, progress, s) {
     const radius = (8 + life * 25) * s;
 
     const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    grad.addColorStop(0, `rgba(251, 191, 36, ${alpha})`);
-    grad.addColorStop(0.5, `rgba(217, 119, 6, ${alpha * 0.4})`);
-    grad.addColorStop(1, "rgba(217, 119, 6, 0)");
+    grad.addColorStop(0, `${cP}, ${alpha})`);
+    grad.addColorStop(0.5, `${cS}, ${alpha * 0.4})`);
+    grad.addColorStop(1, `${cS}, 0)`);
 
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -32,7 +32,7 @@ function smokeWisps(ctx, w, h, progress, s) {
 }
 
 // --- Effect 2: Static / Interference ---
-function staticInterference(ctx, w, h, progress, s) {
+function staticInterference(ctx, w, h, progress, s, cP, cS) {
   const intensity = Math.sin(progress * Math.PI);
 
   const cellSize = Math.max(2, Math.round(3 * s));
@@ -55,7 +55,7 @@ function staticInterference(ctx, w, h, progress, s) {
   for (let i = 0; i < scanCount; i++) {
     const sy = Math.random() * h;
     const sh = (1 + Math.random() * 3) * s;
-    ctx.fillStyle = `rgba(251, 191, 36, ${intensity * 0.12 * Math.random()})`;
+    ctx.fillStyle = `${cP}, ${intensity * 0.12 * Math.random()})`;
     ctx.fillRect(0, sy, w, sh);
   }
 
@@ -63,7 +63,7 @@ function staticInterference(ctx, w, h, progress, s) {
   for (let b = 0; b < bars; b++) {
     const by = Math.random() * h;
     const bh = (2 + Math.random() * 8) * s;
-    ctx.fillStyle = `rgba(217, 119, 6, ${intensity * 0.08})`;
+    ctx.fillStyle = `${cS}, ${intensity * 0.08})`;
     ctx.fillRect(0, by, w, bh);
   }
 }
@@ -73,7 +73,7 @@ let _shadowSeed = 0.5;
 function shadowFigureInit() {
   _shadowSeed = 0.2 + Math.random() * 0.6;
 }
-function shadowFigure(ctx, w, h, progress, s) {
+function shadowFigure(ctx, w, h, progress, s, cP, cS, cH) {
   const cx = w * _shadowSeed;
   const cy = h * 0.45;
 
@@ -121,18 +121,18 @@ function shadowFigure(ctx, w, h, progress, s) {
 
     [cx - eyeSpacing, cx + eyeSpacing].forEach((ex) => {
       const outerGlow = ctx.createRadialGradient(ex, eyeY, 0, ex, eyeY, eyeR * 4);
-      outerGlow.addColorStop(0, `rgba(251, 191, 36, ${eyeAlpha * 0.35})`);
-      outerGlow.addColorStop(0.5, `rgba(217, 119, 6, ${eyeAlpha * 0.1})`);
-      outerGlow.addColorStop(1, "rgba(217, 119, 6, 0)");
+      outerGlow.addColorStop(0, `${cP}, ${eyeAlpha * 0.35})`);
+      outerGlow.addColorStop(0.5, `${cS}, ${eyeAlpha * 0.1})`);
+      outerGlow.addColorStop(1, `${cS}, 0)`);
       ctx.fillStyle = outerGlow;
       ctx.beginPath();
       ctx.arc(ex, eyeY, eyeR * 4, 0, Math.PI * 2);
       ctx.fill();
 
       const coreGlow = ctx.createRadialGradient(ex, eyeY, 0, ex, eyeY, eyeR);
-      coreGlow.addColorStop(0, `rgba(255, 251, 235, ${eyeAlpha * 0.9})`);
-      coreGlow.addColorStop(0.4, `rgba(251, 191, 36, ${eyeAlpha * 0.6})`);
-      coreGlow.addColorStop(1, "rgba(251, 191, 36, 0)");
+      coreGlow.addColorStop(0, `${cH}, ${eyeAlpha * 0.9})`);
+      coreGlow.addColorStop(0.4, `${cP}, ${eyeAlpha * 0.6})`);
+      coreGlow.addColorStop(1, `${cP}, 0)`);
       ctx.fillStyle = coreGlow;
       ctx.beginPath();
       ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2);
@@ -142,7 +142,7 @@ function shadowFigure(ctx, w, h, progress, s) {
 }
 
 // --- Effect 4: Spirit Orbs ---
-function spiritOrbs(ctx, w, h, progress, s) {
+function spiritOrbs(ctx, w, h, progress, s, cP, cS, cH) {
   const orbCount = 4;
   const saved = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = "lighter";
@@ -156,18 +156,18 @@ function spiritOrbs(ctx, w, h, progress, s) {
     const radius = (15 + Math.sin(t * Math.PI * 3 + seed) * 5) * s;
 
     const outerGrad = ctx.createRadialGradient(x, y, 0, x, y, radius * 3);
-    outerGrad.addColorStop(0, `rgba(251, 191, 36, ${alpha * 0.2})`);
-    outerGrad.addColorStop(0.5, `rgba(217, 119, 6, ${alpha * 0.05})`);
-    outerGrad.addColorStop(1, "rgba(217, 119, 6, 0)");
+    outerGrad.addColorStop(0, `${cP}, ${alpha * 0.2})`);
+    outerGrad.addColorStop(0.5, `${cS}, ${alpha * 0.05})`);
+    outerGrad.addColorStop(1, `${cS}, 0)`);
     ctx.fillStyle = outerGrad;
     ctx.beginPath();
     ctx.arc(x, y, radius * 3, 0, Math.PI * 2);
     ctx.fill();
 
     const innerGrad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    innerGrad.addColorStop(0, `rgba(255, 251, 235, ${alpha * 0.7})`);
-    innerGrad.addColorStop(0.4, `rgba(251, 191, 36, ${alpha * 0.4})`);
-    innerGrad.addColorStop(1, "rgba(251, 191, 36, 0)");
+    innerGrad.addColorStop(0, `${cH}, ${alpha * 0.7})`);
+    innerGrad.addColorStop(0.4, `${cP}, ${alpha * 0.4})`);
+    innerGrad.addColorStop(1, `${cP}, 0)`);
     ctx.fillStyle = innerGrad;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -178,7 +178,7 @@ function spiritOrbs(ctx, w, h, progress, s) {
 }
 
 // --- Effect 5: Scratches ---
-function scratches(ctx, w, h, progress, s) {
+function scratches(ctx, w, h, progress, s, cP, cS) {
   const scratchCount = 3;
   const drawProgress = Math.min(progress * 1.6, 1);
   const fadeOut = progress > 0.7 ? (1 - progress) / 0.3 : 1;
@@ -197,10 +197,10 @@ function scratches(ctx, w, h, progress, s) {
     const jitterX = 6 * s;
     const jitterY = 4 * s;
 
-    ctx.strokeStyle = `rgba(251, 191, 36, ${0.5 * fadeOut})`;
+    ctx.strokeStyle = `${cP}, ${0.5 * fadeOut})`;
     ctx.lineWidth = Math.max(1, 1.5 * s);
     ctx.lineCap = "round";
-    ctx.shadowColor = `rgba(251, 191, 36, ${0.3 * fadeOut})`;
+    ctx.shadowColor = `${cP}, ${0.3 * fadeOut})`;
     ctx.shadowBlur = 6 * s;
     ctx.beginPath();
 
@@ -213,7 +213,7 @@ function scratches(ctx, w, h, progress, s) {
     }
     ctx.stroke();
 
-    ctx.strokeStyle = `rgba(217, 119, 6, ${0.25 * fadeOut})`;
+    ctx.strokeStyle = `${cS}, ${0.25 * fadeOut})`;
     ctx.lineWidth = Math.max(0.5, 0.8 * s);
     ctx.beginPath();
     for (let j = 0; j <= drawn; j++) {
@@ -230,12 +230,20 @@ function scratches(ctx, w, h, progress, s) {
 
 const EFFECTS = [{ fn: smokeWisps }, { fn: staticInterference }, { fn: shadowFigure, init: shadowFigureInit }, { fn: spiritOrbs }, { fn: scratches }];
 
-export default function PoltergeistCanvas({ trigger }) {
+export default function PoltergeistCanvas({ trigger, colors }) {
+  const effectPrimary = colors?.effectPrimary || "rgba(251,191,36,VAR)";
+  const effectSecondary = colors?.effectSecondary || "rgba(217,119,6,VAR)";
+  const effectHighlight = colors?.effectHighlight || "rgba(255,251,235,VAR)";
+
+  // Parse rgba base colors (strip alpha so effects can control it)
+  const parsedPrimary = effectPrimary.replace(/,\s*[\d.]+\)$/, "");
+  const parsedSecondary = effectSecondary.replace(/,\s*[\d.]+\)$/, "");
+  const parsedHighlight = effectHighlight.replace(/,\s*[\d.]+\)$/, "");
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const activeRef = useRef(false);
 
-  const runEffect = useCallback((effectFn) => {
+  const runEffect = useCallback((effectFn, cPrimary, cSecondary, cHighlight) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -254,7 +262,7 @@ export default function PoltergeistCanvas({ trigger }) {
       const progress = Math.min(elapsed / DURATION, 1);
 
       ctx.clearRect(0, 0, cssW, cssH);
-      effectFn(ctx, cssW, cssH, progress, s);
+      effectFn(ctx, cssW, cssH, progress, s, cPrimary, cSecondary, cHighlight);
 
       if (progress < 1) {
         rafRef.current = requestAnimationFrame(tick);
@@ -310,8 +318,8 @@ export default function PoltergeistCanvas({ trigger }) {
     const idx = Math.floor(Math.random() * EFFECTS.length);
     const effect = EFFECTS[idx];
     if (effect.init) effect.init();
-    runEffect(effect.fn);
-  }, [trigger, runEffect]);
+    runEffect(effect.fn, parsedPrimary, parsedSecondary, parsedHighlight);
+  }, [trigger, runEffect, parsedPrimary, parsedSecondary, parsedHighlight]);
 
   useEffect(() => {
     return () => {

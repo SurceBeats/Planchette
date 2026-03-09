@@ -6,6 +6,9 @@ import Footer from "./Footer";
 import { shouldCheckCrisis, hasKeywordMatch, markCrisisDetected } from "./CrisisTrigger";
 import PoltergeistCanvas from "./PoltergeistCanvas";
 import PlanchetteSvg from "./PlanchetteSvg";
+import { useTheme } from "./themes.jsx";
+import ThemeSelectorModal from "./ThemeSelectorModal";
+import ShareCardModal from "./ShareCardModal";
 
 const BOARD_ITEMS = (() => {
   const items = {};
@@ -43,6 +46,15 @@ function stripDiacritics(str) {
 }
 
 const BOARD_WORDS = ["GOODBYE", "MAYBE", "YES", "NO"];
+
+const IDLE_ANIMS = [
+  { cls: "idle-breathing", duration: 4900 },
+  { cls: "idle-shudder", duration: 1040 },
+  { cls: "idle-levitate", duration: 3320 },
+  { cls: "idle-flicker", duration: 1000 },
+  { cls: "idle-tilt-right", duration: 6000 },
+  { cls: "idle-tilt-left", duration: 6000 },
+];
 
 function cleanToken(token) {
   return stripDiacritics(token.replace(/\.\.\./g, "").replace(/[.\s]/g, "")).toUpperCase();
@@ -100,6 +112,8 @@ async function streamQuestion(question, { onToken, onDone, onCrisis, signal, his
 }
 
 export default function PlanchetteBoard() {
+  const { theme } = useTheme();
+  const [showThemes, setShowThemes] = useState(false);
   const [planchettePos, setPlanchettePos] = useState(BOARD_ITEMS["_REST"]);
   const [activeKey, setActiveKey] = useState(null);
   const [question, setQuestion] = useState("");
@@ -107,6 +121,7 @@ export default function PlanchetteBoard() {
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState([]);
   const [showAbout, setShowAbout] = useState(false);
+  const [shareData, setShareData] = useState(null);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => localStorage.getItem("__disclaimerAccepted") === "true");
   const [showSettings, setShowSettings] = useState(false);
@@ -151,6 +166,11 @@ export default function PlanchetteBoard() {
   const [askTapped, setAskTapped] = useState(false);
   const askRevertTimerRef = useRef(null);
 
+  const busyRef = useRef(false);
+  const idleTimerRef = useRef(null);
+  const idleAnimEndTimerRef = useRef(null);
+  const [idleAnimClass, setIdleAnimClass] = useState(null);
+
   useEffect(() => {
     if (!busy) {
       setAskTapped(false);
@@ -159,6 +179,10 @@ export default function PlanchetteBoard() {
         askRevertTimerRef.current = null;
       }
     }
+  }, [busy]);
+
+  useEffect(() => {
+    busyRef.current = busy;
   }, [busy]);
 
   const handleStop = useCallback(() => {
@@ -707,9 +731,52 @@ export default function PlanchetteBoard() {
 
   processNextRef.current = processNextQuestion;
 
+  // --- Idle nudge animations ---
+  const cancelIdleAnim = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+    if (idleAnimEndTimerRef.current) {
+      clearTimeout(idleAnimEndTimerRef.current);
+      idleAnimEndTimerRef.current = null;
+    }
+    setIdleAnimClass(null);
+  }, []);
+
+  const scheduleIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = null;
+    if (busyRef.current || animatingRef.current) return;
+    const delay = 20000 + Math.random() * 15000;
+    idleTimerRef.current = setTimeout(() => {
+      if (busyRef.current || animatingRef.current) {
+        scheduleIdleTimer();
+        return;
+      }
+      const anim = IDLE_ANIMS[Math.floor(Math.random() * IDLE_ANIMS.length)];
+      setIdleAnimClass(anim.cls);
+      idleAnimEndTimerRef.current = setTimeout(() => {
+        setIdleAnimClass(null);
+        scheduleIdleTimer();
+      }, anim.duration + 100);
+    }, delay);
+  }, []);
+
+  useEffect(() => {
+    if (started && !busy) {
+      scheduleIdleTimer();
+    } else {
+      cancelIdleAnim();
+    }
+    return () => cancelIdleAnim();
+  }, [started, busy, scheduleIdleTimer, cancelIdleAnim]);
+
   const handleAsk = useCallback(() => {
     const q = question.trim();
     if (!q || busy) return;
+
+    cancelIdleAnim();
 
     if (showHelpline) setShowHelpline("closing");
     setLog((prev) => [...prev, { role: "user", text: q }]);
@@ -727,7 +794,7 @@ export default function PlanchetteBoard() {
       }
       startPolling();
     }
-  }, [question, modelStatus, processNextQuestion, startPolling]);
+  }, [question, modelStatus, processNextQuestion, startPolling, cancelIdleAnim]);
 
   const exportPDF = useCallback(async () => {
     const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
@@ -794,17 +861,50 @@ export default function PlanchetteBoard() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center select-none px-3 sm:px-4 relative">
-      <button onClick={() => setShowSettings(true)} className="absolute top-3 right-3 p-2 rounded-lg text-amber-200/30 hover:text-amber-200/70 hover:bg-amber-200/10 transition-colors z-10" title="Settings">
+    <div className="min-h-screen flex flex-col items-center select-none px-3 sm:px-4 relative" style={{ backgroundColor: theme.colors.boardBg, "--theme-active": theme.colors.activeColor, "--theme-glow-rgb": theme.colors.glowRgb, "--theme-spinner-rgb": theme.colors.spinnerRgb }}>
+      <button
+        onClick={() => setShowSettings(true)}
+        className="absolute top-3 right-3 p-2 rounded-lg transition-colors z-10 cursor-pointer"
+        style={{ color: theme.colors.uiTextDim }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = theme.colors.uiText;
+          e.currentTarget.style.backgroundColor = theme.colors.uiAccent;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = theme.colors.uiTextDim;
+          e.currentTarget.style.backgroundColor = "transparent";
+        }}
+        title="Settings"
+      >
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
           <circle cx="12" cy="12" r="3" />
         </svg>
       </button>
+      <button
+        onClick={() => setShowThemes(true)}
+        className="absolute top-3 left-3 sm:top-14 sm:left-auto sm:right-3 p-2 rounded-lg transition-colors z-10 cursor-pointer"
+        style={{ color: theme.colors.uiTextDim }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = theme.colors.uiText;
+          e.currentTarget.style.backgroundColor = theme.colors.uiAccent;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = theme.colors.uiTextDim;
+          e.currentTarget.style.backgroundColor = "transparent";
+        }}
+        title="Themes"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="currentColor" stroke="currentColor" strokeWidth="0.2" d="M20 14c-.092.064-2 2.083-2 3.5c0 1.494.949 2.448 2 2.5c.906.044 2-.891 2-2.5c0-1.5-1.908-3.436-2-3.5M9.586 20c.378.378.88.586 1.414.586s1.036-.208 1.414-.586l7-7l-.707-.707L11 4.586L8.707 2.293L7.293 3.707L9.586 6L4 11.586c-.378.378-.586.88-.586 1.414s.208 1.036.586 1.414zM11 7.414L16.586 13H5.414z" />
+        </svg>
+      </button>
 
       <div className="flex items-center gap-2 mt-4 relative w-full justify-center">
         <img src="/__data__/logoSmall.png" alt="" className="h-7 sm:h-9 opacity-80 smoke-text" />
-        <h1 className="text-2xl sm:text-3xl font-serif tracking-widest text-amber-200/80 uppercase smoke-text">Planchette</h1>
+        <h1 className="text-2xl sm:text-3xl font-serif tracking-widest uppercase smoke-text" style={{ color: "rgba(253,230,138,0.8)" }}>
+          Planchette
+        </h1>
         {DEBUG && (
           <button onClick={() => setShowDebug((v) => !v)} className="absolute left-0 p-1 text-amber-200/30 opacity-50 hover:opacity-100 transition-opacity" title="Debug">
             <span className="text-lg">&#9881;</span>
@@ -858,87 +958,15 @@ export default function PlanchetteBoard() {
           </div>
         </div>
       )}
-      <p className="text-[10px] mb-4 sm:text-xs sm:mb-4 tracking-[0.3em] text-amber-200/30 uppercase subtitle-fade">The Talking Board</p>
+      <p className="text-[10px] mb-4 sm:text-xs sm:mb-4 tracking-[0.3em] uppercase subtitle-fade" style={{ color: "rgba(253,230,138,0.3)" }}>
+        The Talking Board
+      </p>
 
-      <div className={`relative w-full max-w-2xl aspect-[4/3] mx-auto cursor-pointer ${transitioning ? "board-awaken" : ""} ${boardEffect === "shake" ? "board-shake" : ""} ${boardEffect === "glow" ? "board-glow" : ""} ${boardEffect === "flicker" ? "board-flicker" : ""} ${boardEffect === "fadeout" ? "board-fadeout" : ""}`} onClick={!started && !transitioning ? startSession : undefined}>
-        <div className="absolute inset-0 rounded-2xl shadow-2xl overflow-hidden" style={{ borderWidth: "1.5px", borderStyle: "solid", borderColor: "rgba(139, 105, 20, 0.35)", backgroundColor: "#141210" }}>
-          <div className="absolute inset-0 rounded-2xl" style={{ backgroundColor: "rgba(120, 53, 15, 0.08)" }} />
+      <div className={`relative w-full max-w-2xl aspect-[4/3] mx-auto cursor-pointer rounded-3xl ${transitioning ? "board-awaken" : ""} ${boardEffect === "shake" ? "board-shake" : ""} ${boardEffect === "glow" ? "board-glow" : ""} ${boardEffect === "flicker" ? "board-flicker" : ""} ${boardEffect === "fadeout" ? "board-fadeout" : ""}`} onClick={!started && !transitioning ? startSession : undefined}>
+        <div className="absolute inset-0 rounded-3xl shadow-2xl overflow-hidden" style={{ borderWidth: "1.5px", borderStyle: "solid", borderColor: theme.colors.boardBorder, backgroundColor: theme.colors.boardBg }}>
+          <div className="absolute inset-0" style={{ backgroundColor: theme.colors.boardGradient }} />
+          <theme.BoardDecorations />
         </div>
-
-        {/* Board decorative elements */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 300" preserveAspectRatio="none">
-          <defs>
-            <radialGradient id="boardVignette" cx="50%" cy="45%" r="70%">
-              <stop offset="0%" stopColor="rgba(120,53,15,0.12)" />
-              <stop offset="60%" stopColor="rgba(60,30,8,0.04)" />
-              <stop offset="100%" stopColor="rgba(0,0,0,0.2)" />
-            </radialGradient>
-          </defs>
-
-          {/* Warm vignette gradient */}
-          <path d="M0 0 H400 V300 H0 Z" fill="url(#boardVignette)" />
-
-          {/* Inner ornate border */}
-          <path d="M28 12 L372 12 Q388 12 388 28 L388 272 Q388 288 372 288 L28 288 Q12 288 12 272 L12 28 Q12 12 28 12 Z" fill="none" stroke="rgba(139,105,20,0.25)" strokeWidth="1" />
-          <path d="M34 18 L366 18 Q382 18 382 34 L382 266 Q382 282 366 282 L34 282 Q18 282 18 266 L18 34 Q18 18 34 18 Z" fill="none" stroke="rgba(139,105,20,0.12)" strokeWidth="0.6" />
-
-          {/* Sun (top-left near YES) */}
-          <circle cx="46" cy="42" r="10" fill="rgba(251,191,36,0.05)" stroke="rgba(251,191,36,0.2)" strokeWidth="0.7" />
-          <circle cx="46" cy="42" r="5.5" fill="rgba(251,191,36,0.08)" />
-          {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
-            const rad = (angle * Math.PI) / 180;
-            return <path key={`sr${angle}`} d={`M${(46 + Math.cos(rad) * 13).toFixed(1)} ${(42 + Math.sin(rad) * 13).toFixed(1)} L${(46 + Math.cos(rad) * 17).toFixed(1)} ${(42 + Math.sin(rad) * 17).toFixed(1)}`} stroke="rgba(251,191,36,0.18)" strokeWidth="0.7" strokeLinecap="round" />;
-          })}
-
-          {/* Moon crescent (top-right near NO) */}
-          <path d="M354 32 A12 12 0 1 1 354 52 A8 8 0 1 0 354 32" fill="rgba(251,191,36,0.05)" stroke="rgba(251,191,36,0.18)" strokeWidth="0.7" />
-
-          {/* Small star accents */}
-          <circle cx="30" cy="65" r="1.2" fill="rgba(251,191,36,0.15)" />
-          <circle cx="370" cy="65" r="1.2" fill="rgba(251,191,36,0.15)" />
-          <circle cx="20" cy="150" r="0.9" fill="rgba(251,191,36,0.1)" />
-          <circle cx="380" cy="150" r="0.9" fill="rgba(251,191,36,0.1)" />
-          <circle cx="26" cy="220" r="0.7" fill="rgba(251,191,36,0.08)" />
-          <circle cx="374" cy="220" r="0.7" fill="rgba(251,191,36,0.08)" />
-
-          {/* Decorative separator between letters and numbers */}
-          <path d="M70 183 Q200 178 330 183" fill="none" stroke="rgba(139,105,20,0.12)" strokeWidth="0.5" />
-
-          {/* Corner ornaments */}
-          <path d="M18 40 Q18 18 40 18" fill="none" stroke="rgba(139,105,20,0.3)" strokeWidth="1.2" strokeLinecap="round" />
-          <path d="M24 36 Q24 24 36 24" fill="none" stroke="rgba(139,105,20,0.15)" strokeWidth="0.5" />
-          <path d="M382 40 Q382 18 360 18" fill="none" stroke="rgba(139,105,20,0.3)" strokeWidth="1.2" strokeLinecap="round" />
-          <path d="M376 36 Q376 24 364 24" fill="none" stroke="rgba(139,105,20,0.15)" strokeWidth="0.5" />
-          <path d="M18 260 Q18 282 40 282" fill="none" stroke="rgba(139,105,20,0.3)" strokeWidth="1.2" strokeLinecap="round" />
-          <path d="M24 264 Q24 276 36 276" fill="none" stroke="rgba(139,105,20,0.15)" strokeWidth="0.5" />
-          <path d="M382 260 Q382 282 360 282" fill="none" stroke="rgba(139,105,20,0.3)" strokeWidth="1.2" strokeLinecap="round" />
-          <path d="M376 264 Q376 276 364 276" fill="none" stroke="rgba(139,105,20,0.15)" strokeWidth="0.5" />
-
-          {/* Diamond symbol between numbers and GOODBYE */}
-          <path d="M200 230 L205 238 L200 246 L195 238 Z" fill="none" stroke="rgba(251,191,36,0.18)" strokeWidth="0.6" />
-          <path d="M200 233 L203 238 L200 243 L197 238 Z" fill="rgba(251,191,36,0.06)" stroke="none" />
-
-          {/* Decorative lines flanking the diamond */}
-          <path d="M150 238 L188 238" fill="none" stroke="rgba(139,105,20,0.15)" strokeWidth="0.5" />
-          <path d="M212 238 L250 238" fill="none" stroke="rgba(139,105,20,0.15)" strokeWidth="0.5" />
-
-          {/* Left scroll flourish near GOODBYE */}
-          <path d="M75 268 Q90 252 110 258 Q120 262 125 258" fill="none" stroke="rgba(139,105,20,0.2)" strokeWidth="0.6" strokeLinecap="round" />
-          <path d="M80 272 Q92 260 108 264" fill="none" stroke="rgba(139,105,20,0.1)" strokeWidth="0.4" />
-
-          {/* Right scroll flourish near GOODBYE (mirrored) */}
-          <path d="M325 268 Q310 252 290 258 Q280 262 275 258" fill="none" stroke="rgba(139,105,20,0.2)" strokeWidth="0.6" strokeLinecap="round" />
-          <path d="M320 272 Q308 260 292 264" fill="none" stroke="rgba(139,105,20,0.1)" strokeWidth="0.4" />
-
-          {/* GOODBYE decorative arc */}
-          <path d="M130 262 Q200 276 270 262" fill="none" stroke="rgba(139,105,20,0.18)" strokeWidth="0.6" />
-
-          {/* Bottom accent stars */}
-          <circle cx="110" cy="240" r="0.8" fill="rgba(251,191,36,0.1)" />
-          <circle cx="290" cy="240" r="0.8" fill="rgba(251,191,36,0.1)" />
-          <circle cx="90" cy="255" r="0.6" fill="rgba(251,191,36,0.07)" />
-          <circle cx="310" cy="255" r="0.6" fill="rgba(251,191,36,0.07)" />
-        </svg>
 
         {!started && (
           <div
@@ -951,14 +979,24 @@ export default function PlanchetteBoard() {
             }}
           >
             <img src="/__data__/logoSmall.png" alt="" className="h-12 sm:h-16 opacity-70 mb-3" />
-            <h2 className="text-xl sm:text-2xl font-serif tracking-widest text-amber-200/80 uppercase">Planchette</h2>
-            <p className="text-[10px] sm:text-xs tracking-[0.3em] text-amber-200/30 uppercase mt-1 mb-6">The Talking Board</p>
+            <h2 className="text-xl sm:text-2xl font-serif tracking-widest uppercase" style={{ color: "rgba(253,230,138,0.8)" }}>
+              Planchette
+            </h2>
+            <p className="text-[10px] sm:text-xs tracking-[0.3em] uppercase mt-1 mb-6" style={{ color: "rgba(253,230,138,0.3)" }}>
+              The Talking Board
+            </p>
 
-            {(modelStatus === "checking" || modelStatus === "idle") && <p className="text-amber-200/40 text-xs sm:text-sm tracking-widest uppercase animate-pulse">Preparing...</p>}
+            {(modelStatus === "checking" || modelStatus === "idle") && (
+              <p className="text-xs sm:text-sm tracking-widest uppercase animate-pulse" style={{ color: theme.colors.uiTextDim }}>
+                Preparing...
+              </p>
+            )}
 
             {modelStatus === "downloading" && (
               <div className="text-center space-y-2 w-3/4">
-                <p className="text-amber-200/50 text-xs sm:text-sm">Summoning the spirits... {Math.round(downloadProgress * 100)}%</p>
+                <p className="text-xs sm:text-sm" style={{ color: theme.colors.uiTextDim }}>
+                  Summoning the spirits... {Math.round(downloadProgress * 100)}%
+                </p>
                 <div className="w-48 sm:w-64 mx-auto progress-track">
                   <div className="progress-fill" style={{ width: `${downloadProgress * 100}%` }} />
                 </div>
@@ -967,12 +1005,14 @@ export default function PlanchetteBoard() {
 
             {modelStatus === "loading" && (
               <div className="text-center space-y-2">
-                <p className="text-amber-200/50 text-xs sm:text-sm animate-pulse">Awakening the spirits...</p>
+                <p className="text-xs sm:text-sm animate-pulse" style={{ color: theme.colors.uiTextDim }}>
+                  Awakening the spirits...
+                </p>
               </div>
             )}
 
             {modelStatus === "ready" && (
-              <button onClick={startSession} className="px-8 py-2.5 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 text-sm tracking-widest uppercase transition-colors">
+              <button onClick={startSession} className="px-8 py-2.5 rounded-lg text-sm tracking-widest uppercase transition-colors cursor-pointer" style={{ backgroundColor: theme.colors.uiAccent, borderWidth: "1px", borderStyle: "solid", borderColor: theme.colors.uiBorder, color: theme.colors.uiText }}>
                 Begin Session
               </button>
             )}
@@ -986,7 +1026,8 @@ export default function PlanchetteBoard() {
                     setModelStatus("downloading");
                     startPolling();
                   }}
-                  className="px-6 py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-900/30 rounded-lg text-amber-200/60 text-sm transition-colors"
+                  className="px-6 py-2 rounded-lg text-sm transition-colors"
+                  style={{ backgroundColor: theme.colors.uiAccent, borderWidth: "1px", borderStyle: "solid", borderColor: theme.colors.uiBorder, color: theme.colors.uiTextDim }}
                 >
                   Try Again
                 </button>
@@ -1009,8 +1050,8 @@ export default function PlanchetteBoard() {
                 style={{
                   left: `${pos.x}%`,
                   top: `${pos.y}%`,
-                  color: isActive ? "#fcd34d" : "rgba(253, 230, 138, 0.65)",
-                  textShadow: isActive ? "0 0 18px rgba(251,191,36,0.8)" : "0 0 4px rgba(251,191,36,0.12)",
+                  color: isActive ? theme.colors.activeColor : theme.colors.letterColor,
+                  textShadow: isActive ? `0 0 18px ${theme.colors.activeGlow}` : `0 0 4px ${theme.colors.letterShadow}`,
                 }}
               >
                 {key}
@@ -1019,10 +1060,12 @@ export default function PlanchetteBoard() {
           })}
 
         <div className="absolute pointer-events-none transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)]" style={{ left: `${planchettePos.x}%`, top: `${planchettePos.y}%`, width: "12.5%", aspectRatio: "428/456", transform: "translate(-50%, -56%)" }}>
-          <PlanchetteSvg className={`w-full h-full drop-shadow-[0_0_24px_rgba(251,191,36,0.25)] ${waiting ? "planchette-hover" : ""}`} />
+          <div className={`w-full h-full ${idleAnimClass || ""}`}>
+            <PlanchetteSvg className={`w-full h-full ${waiting ? "planchette-hover" : ""}`} style={{ filter: `drop-shadow(0 0 24px ${theme.colors.glowColor}40)` }} wood1={theme.colors.wood[0]} wood2={theme.colors.wood[1]} wood3={theme.colors.wood[2]} wood4={theme.colors.wood[3]} wood5={theme.colors.wood[4]} crystal={theme.colors.crystal} />
+          </div>
         </div>
 
-        <PoltergeistCanvas trigger={poltergeistTrigger} />
+        <PoltergeistCanvas trigger={poltergeistTrigger} colors={{ effectPrimary: theme.colors.effectPrimary, effectSecondary: theme.colors.effectSecondary, effectHighlight: theme.colors.effectHighlight }} />
       </div>
 
       {started && revealedLetters.length > 0 && (
@@ -1031,11 +1074,17 @@ export default function PlanchetteBoard() {
             item.key === "_BREAK" ? (
               <span key={item.id} className="inline-block w-5" />
             ) : item.key === "_DOT" ? (
-              <span key={item.id} className="inline-block text-amber-300/50 animate-[letterReveal_0.5s_ease-out_forwards] mx-[1px]">
+              <span key={item.id} className="inline-block animate-[letterReveal_0.5s_ease-out_forwards] mx-[1px]" style={{ color: theme.colors.uiSpiritText }}>
                 .
               </span>
+            ) : item.key.length > 1 ? (
+              item.key.split("").map((ch, i) => (
+                <span key={`${item.id}-${i}`} className="inline-block animate-[letterReveal_0.5s_ease-out_forwards] mx-[1px]" style={{ color: theme.colors.activeColor }}>
+                  {ch}
+                </span>
+              ))
             ) : (
-              <span key={item.id} className="inline-block text-amber-300 animate-[letterReveal_0.5s_ease-out_forwards] mx-[1px]">
+              <span key={item.id} className="inline-block animate-[letterReveal_0.5s_ease-out_forwards] mx-[1px]" style={{ color: theme.colors.activeColor }}>
                 {item.key}
               </span>
             ),
@@ -1046,13 +1095,13 @@ export default function PlanchetteBoard() {
       {started && (
         <div className="mt-4 mb-8 w-full max-w-2xl ui-slide-in">
           <div className="flex gap-3">
-            <input type="text" value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 150))} onKeyDown={handleKeyDown} maxLength={150} placeholder={busy ? "The spirits are speaking…" : "Ask the spirits…"} className="flex-1 min-w-0 text-base py-2.5 px-3 sm:py-3 sm:px-4 bg-neutral-900 border border-amber-900/30 rounded-lg text-amber-100 placeholder-amber-200/20 outline-none focus:border-amber-700/60 transition-colors" />
+            <input type="text" value={question} onChange={(e) => setQuestion(e.target.value.slice(0, 150))} onKeyDown={handleKeyDown} maxLength={150} placeholder={busy ? "The spirits are speaking…" : "Ask the spirits…"} className="flex-1 min-w-0 text-base py-2.5 px-3 sm:py-3 sm:px-4 rounded-lg outline-none transition-colors" style={{ backgroundColor: theme.colors.uiInputBg, borderWidth: "1px", borderStyle: "solid", borderColor: theme.colors.uiBorder, color: theme.colors.uiText }} />
             {busy ? (
-              <button onClick={handleBusyTap} className={`w-[60px] flex items-center justify-center py-3 border rounded-lg transition-colors ${askTapped ? "bg-red-500/25 border-red-500/40" : "bg-amber-900/40 border-amber-900/40"}`}>
+              <button onClick={handleBusyTap} className={`w-[60px] flex items-center justify-center py-3 border rounded-lg transition-colors ${askTapped ? "bg-red-500/25 border-red-500/40" : ""}`} style={askTapped ? {} : { backgroundColor: theme.colors.uiAccent, borderColor: theme.colors.uiBorder }}>
                 {askTapped ? <span className="text-red-500 text-[13px] font-semibold">Stop</span> : <div className="ask-spinner" />}
               </button>
             ) : (
-              <button onClick={handleAsk} disabled={!question.trim()} className="w-[60px] text-base py-3 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-900/40 rounded-lg text-amber-200/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+              <button onClick={handleAsk} disabled={!question.trim()} className="w-[60px] text-base py-3 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed" style={{ backgroundColor: theme.colors.uiAccent, borderWidth: "1px", borderStyle: "solid", borderColor: theme.colors.uiBorder, color: theme.colors.uiText }}>
                 Ask
               </button>
             )}
@@ -1093,50 +1142,69 @@ export default function PlanchetteBoard() {
                       break;
                     }
                   }
-                  return [...pairs].reverse().map(({ userEntry, spiritEntry, idx }, i) => (
-                    <div key={idx} className="log-pair border-l-2 border-amber-700/30 pl-2 py-1 space-y-0.5">
-                      <div className="text-neutral-500">
-                        <span className="text-neutral-600 mr-2">You:</span>
-                        {userEntry.text}
-                      </div>
-                      {spiritEntry ? (
-                        <div className={spiritEntry.crisis ? "text-red-400/70 font-mono tracking-wider" : "text-amber-400/70 font-mono tracking-wider"}>
-                          <span className="text-neutral-600 mr-2">Spirit:</span>
-                          {idx === newestSpiritIdx
-                            ? spiritEntry.text.split("").map((ch, ci) =>
-                                ch === " " ? (
-                                  <span key={ci} className="log-letter-space" />
-                                ) : (
-                                  <span key={ci} className="log-letter" style={{ animationDelay: `${ci * 50}ms` }}>
-                                    {ch}
-                                  </span>
-                                ),
-                              )
-                            : spiritEntry.text}
-                          {spiritEntry.crisis && (
-                            <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center ml-2 text-red-400/50 hover:text-red-400/80 transition-colors align-middle" title="Find a helpline">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                              </svg>
-                            </a>
+                  return [...pairs].reverse().map(({ userEntry, spiritEntry, idx }, i) => {
+                    const hasAnswer = !!spiritEntry;
+                    return (
+                      <div key={idx} className="log-pair flex items-center gap-1.5">
+                        {/* Share icon — centered left of the pair */}
+                        <button onClick={hasAnswer ? () => setShareData({ question: userEntry.text, answer: spiritEntry.text }) : undefined} disabled={!hasAnswer} className={`flex-shrink-0 p-1 rounded transition-all ${hasAnswer ? "cursor-pointer opacity-40 hover:opacity-80" : "opacity-20 cursor-default"}`} style={{ color: theme.colors.uiSpiritText }} title={hasAnswer ? "Share as card" : "Waiting for response..."}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2L12 15M12 2L8 6M12 2L16 6" />
+                            <path d="M4 12V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V12" />
+                          </svg>
+                        </button>
+                        {/* Question + answer block */}
+                        <div className="flex-1 border-l-2 pl-2 py-1 space-y-0.5" style={{ borderColor: theme.colors.uiLogBorder }}>
+                          <div style={{ color: "rgba(163,163,163,0.6)" }}>
+                            <span className="mr-2 font-mono" style={{ color: "rgba(115,115,115,0.6)" }}>
+                              You:
+                            </span>
+                            {userEntry.text}
+                          </div>
+                          {spiritEntry ? (
+                            <div className={spiritEntry.crisis ? "text-red-400/70 font-mono tracking-wider" : "font-mono tracking-wider"} style={spiritEntry.crisis ? {} : { color: theme.colors.uiSpiritText }}>
+                              <span className="mr-2" style={{ color: "rgba(115,115,115,0.6)" }}>
+                                Spirit:
+                              </span>
+                              {idx === newestSpiritIdx
+                                ? spiritEntry.text.split("").map((ch, ci) =>
+                                    ch === " " ? (
+                                      <span key={ci} className="log-letter-space" />
+                                    ) : (
+                                      <span key={ci} className="log-letter" style={{ animationDelay: `${ci * 50}ms` }}>
+                                        {ch}
+                                      </span>
+                                    ),
+                                  )
+                                : spiritEntry.text}
+                              {spiritEntry.crisis && (
+                                <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center ml-2 text-red-400/50 hover:text-red-400/80 transition-colors align-middle" title="Find a helpline">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                                  </svg>
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            i === 0 &&
+                            isLastPairWaiting && (
+                              <div className="font-mono tracking-wider" style={{ color: theme.colors.uiSpiritText, opacity: 0.7 }}>
+                                <span className="mr-2" style={{ color: "rgba(115,115,115,0.6)" }}>
+                                  Spirit:
+                                </span>
+                                <span className="typing-dot">.</span>
+                                <span className="typing-dot">.</span>
+                                <span className="typing-dot">.</span>
+                              </div>
+                            )
                           )}
                         </div>
-                      ) : (
-                        i === 0 &&
-                        isLastPairWaiting && (
-                          <div className="text-amber-400/40 font-mono tracking-wider">
-                            <span className="text-neutral-600 mr-2">Spirit:</span>
-                            <span className="typing-dot">.</span>
-                            <span className="typing-dot">.</span>
-                            <span className="typing-dot">.</span>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  ));
+                      </div>
+                    );
+                  });
                 })()}
               </div>
-              <button onClick={exportPDF} className="mt-3 w-full py-2 rounded-lg border border-amber-900/30 bg-amber-900/20 text-[11px] sm:text-xs text-amber-200/40 hover:text-amber-200/60 hover:bg-amber-900/30 transition-colors cursor-pointer">
+              <button onClick={exportPDF} className="mt-3 w-full py-2 rounded-lg text-[11px] sm:text-xs transition-colors cursor-pointer" style={{ borderWidth: "1px", borderStyle: "solid", borderColor: theme.colors.uiBorder, backgroundColor: theme.colors.uiAccent, color: theme.colors.uiTextDim }}>
                 Export this Session
               </button>
             </>
@@ -1159,6 +1227,8 @@ export default function PlanchetteBoard() {
         />
       )}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showThemes && <ThemeSelectorModal onClose={() => setShowThemes(false)} />}
+      {shareData && <ShareCardModal question={shareData.question} answer={shareData.answer} onClose={() => setShareData(null)} />}
     </div>
   );
 }

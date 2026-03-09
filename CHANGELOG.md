@@ -1,6 +1,35 @@
 # Changelog
 
-## 1.1.24 (Latest)
+## 1.2.42 (Latest)
+
+- Share as Card: new `ShareCardModal` for exporting spirit responses as tarot-style shareable card images
+- TarotCard component with scalable layout system (360-base coordinates), dark overlay, text shadows, and vertical centering
+- 4 card decks with 20 unique designs: Realm (8), Medley (6), Ocean (3), Presence (3), each with custom background art
+- Card design selector grouped by deck with color-coded borders and collection labels
+- Canvas 2D export engine: pixel-perfect PNG rendering bypassing html2canvas, with cover-mode background, rounded corners, text wrapping, and shadow effects
+- Optional QR code on exported cards linking to the App Store, with toggle to remove
+- Card filename includes sanitized answer text and timestamp (`Planchette-Tarot-Card-{answer}-{date}.png`)
+- Share icon button on each question-answer pair in conversation log to trigger card creation
+- Card design auto-selected by hashing the answer text, with full manual override via deck browser
+- App Store QR code asset (`qr-appstore.png`) added
+
+## 1.1.26
+
+- Planchette idle animations: when the board is idle, the planchette occasionally comes alive on its own breathing, shuddering, levitating and slamming down, flickering between dimensions, or tilting as if examined by an unseen force
+- Full 6-theme system: Classic, Skull, Ocean, Fire, Universe, Garden — all freely available
+- New `themes.jsx` with ThemeProvider context, localStorage persistence, and per-theme BoardDecorations SVG components
+- Theme selector modal with board previews, checkmark selection, and smooth open/close animations
+- All board elements themed: background, border, vignette gradient, letters, words, active glow, planchette colors, input/log UI
+- CSS animations now use CSS custom properties (`--theme-active`, `--theme-glow-rgb`, `--theme-spinner-rgb`) for per-theme effects
+- PlanchetteSvg accepts dynamic wood/crystal color props from active theme
+- PoltergeistCanvas effects adapt to theme colors (effectPrimary/Secondary/Highlight)
+- SVG radialGradient vignette with 10-stop smooth gradient for realistic board depth
+- Conversation log uses neutral grays for You/Spirit labels
+- Increased letter spacing in conversation log (0.25em → 0.6em) for better readability
+- Theme button: top-left on mobile, below gear on desktop
+- Board container with proper overflow-hidden and rounded corners
+
+## 1.1.24
 
 - New board, ornate double inner border, warm vignette gradient overlay
 - Added board decorative SVG elements: sun symbol (top-left), moon crescent (top-right), star accents, corner ornaments, diamond separator, scroll flourishes near GOODBYE, decorative arc and accent stars

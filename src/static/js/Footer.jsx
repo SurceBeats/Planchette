@@ -4,12 +4,12 @@ export default function Footer({ onAbout, onDisclaimer }) {
   return (
     <footer className="mt-auto w-full border-t border-amber-900/20 py-3 px-4 space-y-2">
       <div className="flex justify-center">
-        <a href="https://apps.apple.com/us/app/planchette-the-talking-board/id6759858464" target="_blank" rel="noopener noreferrer">
+        <a href="https://apps.apple.com/app/id6759858464" target="_blank" rel="noopener noreferrer">
           <img src="/__data__/appstore.png" alt="Download on the App Store" className="h-10 opacity-40 hover:opacity-70 transition-opacity" />
         </a>
       </div>
       <p className="text-[11px] text-amber-200/25 text-center flex flex-wrap items-center justify-center gap-x-1.5">
-        <span>v1.1.24</span>
+        <span>v1.2.42</span>
         <span>|</span>
         <button onClick={onAbout} className="hover:text-amber-200/50 transition-colors cursor-pointer">
           About Planchette
