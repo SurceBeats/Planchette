@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.2.42 (Latest)
+## 1.2.44 (Latest)
+
+- Removed third-party audio credits from About modal, all FX is now produced by Surce Beats (yes, me, I'm a music producer and sound designer too, a modern renaissance man)
+
+## 1.2.42
 
 - Share as Card: new `ShareCardModal` for exporting spirit responses as tarot-style shareable card images
 - TarotCard component with scalable layout system (360-base coordinates), dark overlay, text shadows, and vertical centering

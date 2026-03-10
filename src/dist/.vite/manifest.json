@@ -1,6 +1,6 @@
 {
   "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js": {
-    "file": "assets/planchette-1Iif4Fg01OAx.js",
+    "file": "assets/planchette-xHMG9kq7jPbW.js",
     "name": "react-pdf.browser",
     "src": "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js",
     "isDynamicEntry": true,
@@ -8,11 +8,11 @@
       "src/static/js/__main__.ts"
     ],
     "css": [
-      "assets/planchette-D-SXtsfcrmDt.css"
+      "assets/planchette-CehQB99nr1Kq.css"
     ]
   },
   "src/static/css/global.css": {
-    "file": "assets/planchette-D-SXtsfcrmDt.css",
+    "file": "assets/planchette-CehQB99nr1Kq.css",
     "src": "src/static/css/global.css",
     "isEntry": true,
     "name": "global",
@@ -21,7 +21,7 @@
     ]
   },
   "src/static/js/__main__.ts": {
-    "file": "assets/planchette-DAoN7urPhatw.js",
+    "file": "assets/planchette-MGu4CHBvnD4E.js",
     "name": "__main__",
     "src": "src/static/js/__main__.ts",
     "isEntry": true,
@@ -29,7 +29,7 @@
       "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js"
     ],
     "css": [
-      "assets/planchette-D-SXtsfcrmDt.css"
+      "assets/planchette-CehQB99nr1Kq.css"
     ]
   }
 }

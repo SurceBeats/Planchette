@@ -61,55 +61,6 @@ export default function AboutModal({ onClose }) {
           </div>
 
           <div className="border-t border-amber-900/20 pt-4">
-            <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">Audio Credits</h3>
-            <p>
-              <span className="text-amber-300/60">Bus Ride</span> by <span className="text-amber-300/60">ElevatorFan2020</span>
-              <br />
-              <a href="https://freesound.org/s/846035/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
-                freesound.org/s/846035
-              </a>
-              <br />
-              <span className="text-amber-200/30">License: Creative Commons 0</span>
-            </p>
-            <p className="mt-2">
-              <span className="text-amber-300/60">Fence Opening</span> by <span className="text-amber-300/60">Robo9418</span>
-              <br />
-              <a href="https://freesound.org/s/841832/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
-                freesound.org/s/841832
-              </a>
-              <br />
-              <span className="text-amber-200/30">License: Creative Commons 0</span>
-            </p>
-            <p className="mt-2">
-              <span className="text-amber-300/60">Hint, Clue, Trace, 01</span> by <span className="text-amber-300/60">LilMati</span>
-              <br />
-              <a href="https://freesound.org/s/441266/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
-                freesound.org/s/441266
-              </a>
-              <br />
-              <span className="text-amber-200/30">License: Creative Commons 0</span>
-            </p>
-            <p className="mt-2">
-              <span className="text-amber-300/60">Prompt user for response</span> by <span className="text-amber-300/60">noirenex</span>
-              <br />
-              <a href="https://freesound.org/s/245662/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
-                freesound.org/s/245662
-              </a>
-              <br />
-              <span className="text-amber-200/30">License: Creative Commons 0</span>
-            </p>
-            <p className="mt-2">
-              <span className="text-amber-300/60">Scary Horn</span> by <span className="text-amber-300/60">Poligonstudio</span>
-              <br />
-              <a href="https://freesound.org/s/397318/" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
-                freesound.org/s/397318
-              </a>
-              <br />
-              <span className="text-amber-200/30">License: Creative Commons 0</span>
-            </p>
-          </div>
-
-          <div className="border-t border-amber-900/20 pt-4">
             <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">License</h3>
             <p>
               <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
