@@ -1,6 +1,17 @@
 # Changelog
 
-## 1.2.44 (Latest)
+## 1.2.46 (Latest)
+
+- Export button now shows a loading spinner and "Exporting..." text while the PDF is being generated
+- Export button disabled during export to prevent duplicate clicks and potential hangs
+- Fixed height (38px) on export button to prevent layout shift when spinner appears
+- Directional planchette rotation: the planchette now leans toward its target letter as it moves across the board (ported from iOS), using `atan2` angle calculation clamped to ±15° with CSS transition matching the existing movement easing
+- Ghost echo: semi-transparent duplicate planchette follows 100ms behind with slower 800ms easing, fades out on rest — creates a spectral trail effect
+- Dynamic shadow: dark blurred ellipse under the planchette that shifts opposite to the movement direction, giving the illusion of shifting light as the planchette glides
+- Dust particles: 3–5 wood-toned particles spawn from the planchette's departure position with randomised drift, scale, and fade-out — pool of 15 always-mounted elements to avoid mount/unmount overhead
+- Randomised "thinking" delay (750–1750ms) before inference starts, so fast devices don't break the illusion of the board thinking
+
+## 1.2.44
 
 - Removed third-party audio credits from About modal, all FX is now produced by Surce Beats (yes, me, I'm a music producer and sound designer too, a modern renaissance man)
 

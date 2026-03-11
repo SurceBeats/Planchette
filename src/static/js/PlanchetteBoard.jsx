@@ -163,8 +163,27 @@ export default function PlanchetteBoard() {
   });
 
   const crisisRef = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [askTapped, setAskTapped] = useState(false);
   const askRevertTimerRef = useRef(null);
+
+  const [moveRotate, setMoveRotate] = useState(0);
+  const lastTargetRef = useRef(null);
+
+  // Ghost echo
+  const [ghostPos, setGhostPos] = useState(BOARD_ITEMS["_REST"]);
+  const [ghostRotate, setGhostRotate] = useState(0);
+  const [ghostOpacity, setGhostOpacity] = useState(0);
+  const ghostTimerRef = useRef(null);
+
+  // Dynamic shadow
+  const [shadowPos, setShadowPos] = useState(BOARD_ITEMS["_REST"]);
+  const [shadowOffset, setShadowOffset] = useState({ x: 0, y: 0 });
+
+  // Dust particles
+  const DUST_POOL_SIZE = 15;
+  const [dustParticles, setDustParticles] = useState(() => Array.from({ length: DUST_POOL_SIZE }, (_, i) => ({ id: i, x: 0, y: 0, opacity: 0, dx: 0, dy: 0, scale: 0.6, color: 0, drifted: false })));
+  const dustIndexRef = useRef(0);
 
   const busyRef = useRef(false);
   const idleTimerRef = useRef(null);
@@ -357,15 +376,75 @@ export default function PlanchetteBoard() {
 
   const moveTo = useCallback((key) => {
     const pos = BOARD_ITEMS[key];
-    if (pos) {
-      setPlanchettePos(pos);
-      setActiveKey(key);
-    }
+    if (!pos) return;
+    const prev = lastTargetRef.current || BOARD_ITEMS["_REST"];
+    const dx = pos.x - prev.x;
+    const dy = pos.y - prev.y;
+    const angle = Math.atan2(dx, -dy) * (180 / Math.PI);
+    const lean = Math.max(-15, Math.min(15, angle * 0.3));
+
+    const count = 3 + Math.floor(Math.random() * 3);
+    setDustParticles((pool) => {
+      const next = [...pool];
+      for (let i = 0; i < count; i++) {
+        const idx = (dustIndexRef.current + i) % DUST_POOL_SIZE;
+        next[idx] = {
+          id: idx,
+          x: prev.x + (Math.random() - 0.5) * 4,
+          y: prev.y + (Math.random() - 0.5) * 4,
+          opacity: 0.4,
+          dx: (Math.random() - 0.5) * 2.5,
+          dy: -(2 + Math.random() * 3.5),
+          scale: 0.5 + Math.random() * 0.5,
+          color: Math.floor(Math.random() * 3),
+          drifted: false,
+        };
+      }
+      dustIndexRef.current = (dustIndexRef.current + count) % DUST_POOL_SIZE;
+      return next;
+    });
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setDustParticles((pool) => pool.map((p) => (p.opacity > 0 ? { ...p, opacity: 0, drifted: true } : p)));
+      });
+    });
+
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const shadowOx = (-dx / dist) * 1.5;
+    const shadowOy = (-dy / dist) * 1.5;
+    setShadowPos(pos);
+    setShadowOffset({ x: shadowOx, y: shadowOy });
+
+    setGhostOpacity(0.13);
+    if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
+    ghostTimerRef.current = setTimeout(() => {
+      setGhostPos(pos);
+      setGhostRotate(lean);
+    }, 100);
+
+    lastTargetRef.current = pos;
+    setPlanchettePos(pos);
+    setActiveKey(key);
+    setMoveRotate(lean);
   }, []);
 
   const rest = useCallback(() => {
-    setPlanchettePos(BOARD_ITEMS["_REST"]);
+    const pos = BOARD_ITEMS["_REST"];
+    lastTargetRef.current = pos;
+    setPlanchettePos(pos);
     setActiveKey(null);
+    setMoveRotate(0);
+
+    if (ghostTimerRef.current) clearTimeout(ghostTimerRef.current);
+    ghostTimerRef.current = setTimeout(() => {
+      setGhostPos(pos);
+      setGhostRotate(0);
+    }, 100);
+    setGhostOpacity(0);
+
+    setShadowPos(pos);
+    setShadowOffset({ x: 0, y: 0 });
   }, []);
 
   const processAnimQueue = useCallback(() => {
@@ -472,6 +551,8 @@ export default function PlanchetteBoard() {
 
   const doAskInternal = useCallback(
     async (q) => {
+      const askStart = Date.now();
+
       setRevealedLetters([]);
       animQueueRef.current = [];
       animatingRef.current = false;
@@ -497,6 +578,14 @@ export default function PlanchetteBoard() {
         role: entry.role === "user" ? "user" : "assistant",
         content: entry.text,
       }));
+
+      const MIN_THINKING_MS = 750;
+      const MAX_THINKING_MS = 1750;
+      const thinkingTarget = MIN_THINKING_MS + Math.random() * (MAX_THINKING_MS - MIN_THINKING_MS);
+      const elapsed = Date.now() - askStart;
+      if (elapsed < thinkingTarget) {
+        await new Promise((resolve) => setTimeout(resolve, thinkingTarget - elapsed));
+      }
 
       try {
         await streamQuestion(q, {
@@ -797,61 +886,67 @@ export default function PlanchetteBoard() {
   }, [question, modelStatus, processNextQuestion, startPolling, cancelIdleAnim]);
 
   const exportPDF = useCallback(async () => {
-    const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    const acceptedISO = localStorage.getItem("__disclaimerAcceptedDate");
-    const acceptedStr = acceptedISO ? new Date(acceptedISO).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Unknown";
-
-    let logoB64 = "";
-    let badgeB64 = "";
+    if (exporting) return;
+    setExporting(true);
     try {
-      const [logoResp, badgeResp] = await Promise.all([fetch("/__data__/logoSmall.png"), fetch("/__data__/appstore.png")]);
-      const [logoBlob, badgeBlob] = await Promise.all([logoResp.blob(), badgeResp.blob()]);
-      const toB64 = (blob) =>
-        new Promise((resolve) => {
-          const r = new FileReader();
-          r.onloadend = () => resolve(r.result);
-          r.readAsDataURL(blob);
-        });
-      [logoB64, badgeB64] = await Promise.all([toB64(logoBlob), toB64(badgeBlob)]);
-    } catch {}
+      const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      const acceptedISO = localStorage.getItem("__disclaimerAcceptedDate");
+      const acceptedStr = acceptedISO ? new Date(acceptedISO).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Unknown";
 
-    const { Document, Page, Text, View, Image, Link, StyleSheet, pdf } = await import("@react-pdf/renderer");
+      let logoB64 = "";
+      let badgeB64 = "";
+      try {
+        const [logoResp, badgeResp] = await Promise.all([fetch("/__data__/logoSmall.png"), fetch("/__data__/appstore.png")]);
+        const [logoBlob, badgeBlob] = await Promise.all([logoResp.blob(), badgeResp.blob()]);
+        const toB64 = (blob) =>
+          new Promise((resolve) => {
+            const r = new FileReader();
+            r.onloadend = () => resolve(r.result);
+            r.readAsDataURL(blob);
+          });
+        [logoB64, badgeB64] = await Promise.all([toB64(logoBlob), toB64(badgeBlob)]);
+      } catch {}
 
-    const s = StyleSheet.create({
-      page: { fontFamily: "Times-Roman", padding: 32, color: "#222" },
-      logoWrap: { alignItems: "center", marginBottom: 12 },
-      logo: { width: 48, height: 48, borderRadius: 10 },
-      title: { fontSize: 22, letterSpacing: 4, textAlign: "center" },
-      subtitle: { textAlign: "center", color: "#555", fontSize: 11, letterSpacing: 3, marginTop: 4 },
-      edition: { textAlign: "center", color: "#999", fontSize: 9, letterSpacing: 2, marginTop: 2 },
-      meta: { color: "#444", fontSize: 12, marginTop: 8 },
-      hr: { borderBottomWidth: 1, borderBottomColor: "#ddd", marginVertical: 16 },
-      userRow: { marginBottom: 4, flexDirection: "row", flexWrap: "wrap" },
-      userLabel: { color: "#888", fontSize: 12, fontFamily: "Times-Bold" },
-      userText: { color: "#222", fontSize: 12 },
-      spiritRow: { marginBottom: 12, flexDirection: "row", flexWrap: "wrap" },
-      spiritLabel: { color: "#b45309", fontSize: 12, fontFamily: "Times-Bold" },
-      spiritText: { color: "#222", fontSize: 12, letterSpacing: 1 },
-      footer: { color: "#aaa", fontSize: 9, textAlign: "center" },
-      badgeWrap: { alignItems: "center", marginTop: 16 },
-      badge: { height: 36 },
-    });
+      const { Document, Page, Text, View, Image, Link, StyleSheet, pdf } = await import("@react-pdf/renderer");
 
-    const el = React.createElement;
-    const element = el(Document, null, el(Page, { size: "A4", style: s.page }, logoB64 ? el(View, { style: s.logoWrap }, el(Image, { src: logoB64, style: s.logo })) : null, el(Text, { style: s.title }, "PLANCHETTE"), el(Text, { style: s.subtitle }, "THE TALKING BOARD \u2014 SESSION LOG"), el(Text, { style: s.edition }, "SELF-HOSTED EDITION"), el(Text, { style: s.meta }, `Date: ${date}`), el(Text, { style: s.meta }, `Disclaimer accepted: ${acceptedStr}`), el(View, { style: s.hr }), ...log.map((entry, i) => (entry.role === "user" ? el(View, { key: i, style: s.userRow }, el(Text, { style: s.userLabel }, "You: "), el(Text, { style: s.userText }, entry.text)) : el(View, { key: i, style: s.spiritRow }, el(Text, { style: s.spiritLabel }, "Spirit: "), el(Text, { style: s.spiritText }, entry.text)))), el(View, { style: s.hr }), el(Text, { style: s.footer }, "Generated by Planchette \u2014 AI Spirit Talking Board"), badgeB64 ? el(View, { style: s.badgeWrap }, el(Link, { src: "https://apps.apple.com/us/app/planchette-the-talking-board/id6759858464" }, el(Image, { src: badgeB64, style: s.badge }))) : null));
+      const s = StyleSheet.create({
+        page: { fontFamily: "Times-Roman", padding: 32, color: "#222" },
+        logoWrap: { alignItems: "center", marginBottom: 12 },
+        logo: { width: 48, height: 48, borderRadius: 10 },
+        title: { fontSize: 22, letterSpacing: 4, textAlign: "center" },
+        subtitle: { textAlign: "center", color: "#555", fontSize: 11, letterSpacing: 3, marginTop: 4 },
+        edition: { textAlign: "center", color: "#999", fontSize: 9, letterSpacing: 2, marginTop: 2 },
+        meta: { color: "#444", fontSize: 12, marginTop: 8 },
+        hr: { borderBottomWidth: 1, borderBottomColor: "#ddd", marginVertical: 16 },
+        userRow: { marginBottom: 4, flexDirection: "row", flexWrap: "wrap" },
+        userLabel: { color: "#888", fontSize: 12, fontFamily: "Times-Bold" },
+        userText: { color: "#222", fontSize: 12 },
+        spiritRow: { marginBottom: 12, flexDirection: "row", flexWrap: "wrap" },
+        spiritLabel: { color: "#b45309", fontSize: 12, fontFamily: "Times-Bold" },
+        spiritText: { color: "#222", fontSize: 12, letterSpacing: 1 },
+        footer: { color: "#aaa", fontSize: 9, textAlign: "center" },
+        badgeWrap: { alignItems: "center", marginTop: 16 },
+        badge: { height: 36 },
+      });
 
-    const blob = await pdf(element).toBlob();
-    const dateSlug = new Date().toISOString().split("T")[0];
-    const hash = Math.random().toString(36).substring(2, 10);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Planchette-Session-${dateSlug}-${hash}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [log]);
+      const el = React.createElement;
+      const element = el(Document, null, el(Page, { size: "A4", style: s.page }, logoB64 ? el(View, { style: s.logoWrap }, el(Image, { src: logoB64, style: s.logo })) : null, el(Text, { style: s.title }, "PLANCHETTE"), el(Text, { style: s.subtitle }, "THE TALKING BOARD \u2014 SESSION LOG"), el(Text, { style: s.edition }, "SELF-HOSTED EDITION"), el(Text, { style: s.meta }, `Date: ${date}`), el(Text, { style: s.meta }, `Disclaimer accepted: ${acceptedStr}`), el(View, { style: s.hr }), ...log.map((entry, i) => (entry.role === "user" ? el(View, { key: i, style: s.userRow }, el(Text, { style: s.userLabel }, "You: "), el(Text, { style: s.userText }, entry.text)) : el(View, { key: i, style: s.spiritRow }, el(Text, { style: s.spiritLabel }, "Spirit: "), el(Text, { style: s.spiritText }, entry.text)))), el(View, { style: s.hr }), el(Text, { style: s.footer }, "Generated by Planchette \u2014 AI Spirit Talking Board"), badgeB64 ? el(View, { style: s.badgeWrap }, el(Link, { src: "https://apps.apple.com/us/app/planchette-the-talking-board/id6759858464" }, el(Image, { src: badgeB64, style: s.badge }))) : null));
+
+      const blob = await pdf(element).toBlob();
+      const dateSlug = new Date().toISOString().split("T")[0];
+      const hash = Math.random().toString(36).substring(2, 10);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Planchette-Session-${dateSlug}-${hash}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }, [log, exporting]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey && !busy) {
@@ -1059,7 +1154,17 @@ export default function PlanchetteBoard() {
             );
           })}
 
-        <div className="absolute pointer-events-none transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)]" style={{ left: `${planchettePos.x}%`, top: `${planchettePos.y}%`, width: "12.5%", aspectRatio: "428/456", transform: "translate(-50%, -56%)" }}>
+        <div className="absolute pointer-events-none transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)]" style={{ left: `${shadowPos.x + shadowOffset.x}%`, top: `${shadowPos.y + shadowOffset.y}%`, width: "11%", aspectRatio: "428/456", transform: "translate(-50%, -50%)", backgroundColor: "rgba(0,0,0,0.12)", borderRadius: "50%", filter: "blur(6px)" }} />
+
+        {dustParticles.map((p) => (
+          <div key={p.id} className="absolute pointer-events-none rounded-full" style={{ left: `${p.x}%`, top: `${p.y}%`, width: 6, height: 6, backgroundColor: theme.colors.wood[2 + p.color] || theme.colors.wood[2], opacity: p.opacity, transform: `translate(-50%, -50%) translate(${p.drifted ? p.dx * 12 : 0}px, ${p.drifted ? p.dy * 8 : 0}px) scale(${p.drifted ? 0 : p.scale})`, transition: p.drifted ? "opacity 0.8s ease-out, transform 0.8s ease-out" : "none" }} />
+        ))}
+
+        <div className="absolute pointer-events-none transition-all duration-[800ms] ease-[cubic-bezier(0.3,0.1,0.25,1)]" style={{ left: `${ghostPos.x}%`, top: `${ghostPos.y}%`, width: "12.5%", aspectRatio: "428/456", transform: `translate(-50%, -56%) rotate(${ghostRotate}deg)`, opacity: ghostOpacity, transition: "left 0.8s cubic-bezier(0.3,0.1,0.25,1), top 0.8s cubic-bezier(0.3,0.1,0.25,1), transform 0.8s cubic-bezier(0.3,0.1,0.25,1), opacity 0.4s ease-out" }}>
+          <PlanchetteSvg className="w-full h-full" wood1={theme.colors.wood[0]} wood2={theme.colors.wood[1]} wood3={theme.colors.wood[2]} wood4={theme.colors.wood[3]} wood5={theme.colors.wood[4]} crystal={theme.colors.crystal} />
+        </div>
+
+        <div className="absolute pointer-events-none transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1)]" style={{ left: `${planchettePos.x}%`, top: `${planchettePos.y}%`, width: "12.5%", aspectRatio: "428/456", transform: `translate(-50%, -56%) rotate(${moveRotate}deg)` }}>
           <div className={`w-full h-full ${idleAnimClass || ""}`}>
             <PlanchetteSvg className={`w-full h-full ${waiting ? "planchette-hover" : ""}`} style={{ filter: `drop-shadow(0 0 24px ${theme.colors.glowColor}40)` }} wood1={theme.colors.wood[0]} wood2={theme.colors.wood[1]} wood3={theme.colors.wood[2]} wood4={theme.colors.wood[3]} wood5={theme.colors.wood[4]} crystal={theme.colors.crystal} />
           </div>
@@ -1204,8 +1309,9 @@ export default function PlanchetteBoard() {
                   });
                 })()}
               </div>
-              <button onClick={exportPDF} className="mt-3 w-full py-2 rounded-lg text-[11px] sm:text-xs transition-colors cursor-pointer" style={{ borderWidth: "1px", borderStyle: "solid", borderColor: theme.colors.uiBorder, backgroundColor: theme.colors.uiAccent, color: theme.colors.uiTextDim }}>
-                Export this Session
+              <button onClick={exportPDF} disabled={exporting} className="mt-3 w-full rounded-lg text-[11px] sm:text-xs transition-colors flex items-center justify-center gap-2" style={{ height: 38, borderWidth: "1px", borderStyle: "solid", borderColor: theme.colors.uiBorder, backgroundColor: theme.colors.uiAccent, color: theme.colors.uiTextDim, opacity: exporting ? 0.5 : 1, cursor: exporting ? "not-allowed" : "pointer" }}>
+                {exporting && <div className="ask-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />}
+                {exporting ? "Exporting\u2026" : "Export this Session"}
               </button>
             </>
           )}
