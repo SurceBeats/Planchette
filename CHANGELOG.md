@@ -1,6 +1,15 @@
 # Changelog
 
-## 1.2.46 (Latest)
+## 1.2.52 (Latest)
+
+- 2 new card decks: **Mirror** (6 cards, slate `#94A3B8`) and **The Sin** (6 cards, red `#EF4444`), 12 new card designs
+- Question on share card: cards now show "YOU ASKED" with the original question in italic above "THE SPIRIT SPOKE", with dynamic font sizing based on question length
+- New `showQuestion` prop on TarotCard with full Canvas 2D export support (question text rendered in italic serif with wrapping)
+- Option chips replacing QR toggle: horizontal pill-style chips for "Hide QR" and "Add Question" replace the old toggle switch
+- Button sizing fixes: Share and Close buttons now fixed at 36px height with 13px font, spinner scaled to 0.8 to prevent layout shift
+- Spirit label color brightened from `rgba(254,243,199,0.55)` to `0.75` for better legibility
+
+## 1.2.46
 
 - Export button now shows a loading spinner and "Exporting..." text while the PDF is being generated
 - Export button disabled during export to prevent duplicate clicks and potential hangs

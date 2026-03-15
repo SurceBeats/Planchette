@@ -102,7 +102,7 @@ function wrapLines(ctx, text, maxWidth) {
   return lines;
 }
 
-async function renderExportCanvas({ answer, designIndex, showQR }) {
+async function renderExportCanvas({ question, answer, designIndex, showQR, showQuestion }) {
   const design = CARD_DESIGNS[designIndex] ?? CARD_DESIGNS[0];
   const layout = design.layout ?? DEFAULT_LAYOUT;
   const W = EXPORT_WIDTH;
@@ -176,6 +176,23 @@ async function renderExportCanvas({ answer, designIndex, showQR }) {
 
   const spiritLh = spiritFs * 1.2;
 
+  // Measure question with wrapping (if shown)
+  const hasQuestion = showQuestion && question && question.length > 0;
+  const questionFontSizeBase = hasQuestion ? (question.length > 80 ? layout.answer.sizes[0] * 0.65 : question.length > 40 ? layout.answer.sizes[0] * 0.75 : layout.answer.sizes[1] * 0.7) : 0;
+  const questionFs = questionFontSizeBase * s;
+  let questionLines = [];
+  let questionLh = 0;
+  let questionTotalH = 0;
+  let youAskedH = 0;
+  if (hasQuestion) {
+    ctx.font = `italic ${questionFs}px Georgia, "Times New Roman", serif`;
+    if ("letterSpacing" in ctx) ctx.letterSpacing = `${layout.answer.letterSpacing * 0.5 * s}px`;
+    questionLines = wrapLines(ctx, question, textW);
+    questionLh = questionFs * 1.3;
+    questionTotalH = questionLines.length * questionLh;
+    youAskedH = spiritLh + 4 * s; // "YOU ASKED" label + small gap
+  }
+
   // Measure answer with wrapping
   ctx.font = `700 ${answerFs}px "Courier New", Courier, monospace`;
   if ("letterSpacing" in ctx) ctx.letterSpacing = `${layout.answer.letterSpacing * s}px`;
@@ -183,23 +200,40 @@ async function renderExportCanvas({ answer, designIndex, showQR }) {
   const answerLh = answerFs * 1.3;
   const answerTotalH = answerLines.length * answerLh;
 
-  const totalTextH = spiritLh + gap + answerTotalH;
+  const totalTextH = (hasQuestion ? youAskedH + questionTotalH + gap : 0) + spiritLh + gap + answerTotalH;
   const areaTop = layout.answerTop * s;
   const qrAreaH = (showQR ? layout.qr.marginBottom + layout.qr.size : layout.noQrSpacing) * s;
   const areaH = H - areaTop - qrAreaH;
-  const startY = areaTop + (areaH - totalTextH) / 2;
+  let curY = areaTop + (areaH - totalTextH) / 2;
+
+  // "YOU ASKED" label + question text
+  if (hasQuestion) {
+    ctx.fillStyle = "rgba(254,243,199,0.75)";
+    ctx.font = `${spiritFs}px Georgia, "Times New Roman", serif`;
+    if ("letterSpacing" in ctx) ctx.letterSpacing = `${layout.spiritLabel.letterSpacing * s}px`;
+    ctx.fillText("YOU ASKED", W / 2, curY);
+    curY += spiritLh + 4 * s;
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+    ctx.font = `italic ${questionFs}px Georgia, "Times New Roman", serif`;
+    if ("letterSpacing" in ctx) ctx.letterSpacing = `${layout.answer.letterSpacing * 0.5 * s}px`;
+    for (let i = 0; i < questionLines.length; i++) {
+      ctx.fillText(questionLines[i], W / 2, curY + i * questionLh);
+    }
+    curY += questionTotalH + gap;
+  }
 
   // Spirit label
-  ctx.fillStyle = "rgba(254,243,199,0.55)";
+  ctx.fillStyle = "rgba(254,243,199,0.75)";
   ctx.font = `${spiritFs}px Georgia, "Times New Roman", serif`;
   if ("letterSpacing" in ctx) ctx.letterSpacing = `${layout.spiritLabel.letterSpacing * s}px`;
-  ctx.fillText("THE SPIRIT SPOKE", W / 2, startY);
+  ctx.fillText("THE SPIRIT SPOKE", W / 2, curY);
 
   // Answer
   ctx.fillStyle = "#FFFFFF";
   ctx.font = `700 ${answerFs}px "Courier New", Courier, monospace`;
   if ("letterSpacing" in ctx) ctx.letterSpacing = `${layout.answer.letterSpacing * s}px`;
-  const ansStartY = startY + spiritLh + gap;
+  const ansStartY = curY + spiritLh + gap;
   for (let i = 0; i < answerLines.length; i++) {
     ctx.fillText(answerLines[i], W / 2, ansStartY + i * answerLh);
   }
@@ -248,6 +282,7 @@ export default function ShareCardModal({ question, answer, onClose }) {
 
   const [selectedDesign, setSelectedDesign] = useState(primaryDesign);
   const [hideQR, setHideQR] = useState(false);
+  const [showQuestion, setShowQuestion] = useState(true);
   const [sharing, setSharing] = useState(false);
   const [closing, setClosing] = useState(false);
 
@@ -259,7 +294,7 @@ export default function ShareCardModal({ question, answer, onClose }) {
     if (sharing) return;
     setSharing(true);
     try {
-      const canvas = await renderExportCanvas({ answer, designIndex: selectedDesign, showQR });
+      const canvas = await renderExportCanvas({ question, answer, designIndex: selectedDesign, showQR, showQuestion });
       const url = canvas.toDataURL("image/png", 1);
       const a = document.createElement("a");
       a.href = url;
@@ -272,7 +307,7 @@ export default function ShareCardModal({ question, answer, onClose }) {
     } finally {
       setSharing(false);
     }
-  }, [sharing, answer, selectedDesign, showQR]);
+  }, [sharing, question, answer, selectedDesign, showQR, showQuestion]);
 
   return (
     <div
@@ -292,13 +327,13 @@ export default function ShareCardModal({ question, answer, onClose }) {
         {/* Card preview */}
         <div className="flex justify-center mb-4">
           <div style={{ borderRadius: 10, overflow: "hidden", lineHeight: 0 }}>
-            <TarotCard question={question} answer={answer} designIndex={selectedDesign} width={PREVIEW_WIDTH} showQR={showQR} />
+            <TarotCard question={question} answer={answer} designIndex={selectedDesign} width={PREVIEW_WIDTH} showQR={showQR} showQuestion={showQuestion} />
           </div>
         </div>
 
         {/* Design selector — grouped by deck */}
         {CARD_DESIGNS.length > 1 && (
-          <div className="overflow-x-auto mb-3.5" style={{ marginLeft: -4, marginRight: -4 }}>
+          <div className="overflow-x-auto mb-1.5" style={{ marginLeft: -4, marginRight: -4 }}>
             <div className="flex gap-0 px-1" style={{ width: "max-content" }}>
               {deckGroups.map((group, gi) => (
                 <div key={group.deckId} className="flex flex-col items-center" style={{ marginLeft: gi > 0 ? 12 : 0 }}>
@@ -333,56 +368,47 @@ export default function ShareCardModal({ question, answer, onClose }) {
           </div>
         )}
 
-        {/* QR toggle */}
-        <button
-          onClick={() => setHideQR((v) => !v)}
-          className="w-full flex items-center justify-between cursor-pointer mb-0"
-          style={{
-            backgroundColor: "rgba(120, 53, 15, 0.12)",
-            border: "1px solid rgba(120, 53, 15, 0.2)",
-            borderRadius: 10,
-            padding: "10px 12px",
-          }}
-        >
-          <div className="flex items-center gap-2.5">
-            {/* Toggle track */}
-            <div
-              style={{
-                width: 34,
-                height: 20,
-                borderRadius: 10,
-                backgroundColor: hideQR ? "rgba(251, 191, 36, 0.25)" : "rgba(255,255,255,0.08)",
-                border: `1px solid ${hideQR ? "rgba(251, 191, 36, 0.4)" : "rgba(255,255,255,0.1)"}`,
-                display: "flex",
-                alignItems: "center",
-                padding: "0 2px",
-                justifyContent: hideQR ? "flex-end" : "flex-start",
-                transition: "all 200ms",
-              }}
-            >
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  backgroundColor: hideQR ? "#fbbf24" : "rgba(255,255,255,0.25)",
-                  transition: "all 200ms",
-                }}
-              />
-            </div>
+        {/* Option chips */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setHideQR((v) => !v)}
+            className="flex items-center cursor-pointer"
+            style={{
+              paddingBlock: 6,
+              paddingInline: 10,
+              borderRadius: 20,
+              border: `1px solid ${hideQR ? "rgba(251, 191, 36, 0.4)" : "rgba(255,255,255,0.1)"}`,
+              backgroundColor: hideQR ? "rgba(251, 191, 36, 0.15)" : "rgba(255,255,255,0.04)",
+            }}
+          >
             <span className="font-serif text-xs" style={{ color: hideQR ? "rgba(253,230,138,0.8)" : "rgba(253,230,138,0.5)" }}>
-              Remove QR from card
+              Hide QR
             </span>
-          </div>
-        </button>
+          </button>
+          <button
+            onClick={() => setShowQuestion((v) => !v)}
+            className="flex items-center cursor-pointer"
+            style={{
+              paddingBlock: 6,
+              paddingInline: 10,
+              borderRadius: 20,
+              border: `1px solid ${showQuestion ? "rgba(251, 191, 36, 0.4)" : "rgba(255,255,255,0.1)"}`,
+              backgroundColor: showQuestion ? "rgba(251, 191, 36, 0.15)" : "rgba(255,255,255,0.04)",
+            }}
+          >
+            <span className="font-serif text-xs" style={{ color: showQuestion ? "rgba(253,230,138,0.8)" : "rgba(253,230,138,0.5)" }}>
+              Add Question
+            </span>
+          </button>
+        </div>
 
         {/* Download button */}
         <button
           onClick={handleDownload}
           disabled={sharing}
-          className="w-full flex items-center justify-center gap-2 rounded-xl text-[15px] cursor-pointer transition-colors mt-2"
+          className="w-full flex items-center justify-center gap-2 rounded-xl text-[13px] cursor-pointer transition-colors mt-2"
           style={{
-            height: 46,
+            height: 36,
             backgroundColor: "rgba(120,53,15,0.4)",
             border: "1px solid rgba(120,75,20,0.25)",
             color: "rgba(253,230,138,0.8)",
@@ -395,10 +421,10 @@ export default function ShareCardModal({ question, answer, onClose }) {
           }}
         >
           {sharing ? (
-            <div className="ask-spinner" style={{ width: 16, height: 16 }} />
+            <div className="ask-spinner" style={{ width: 14, height: 14, transform: "scale(0.8)" }} />
           ) : (
             <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
@@ -411,8 +437,12 @@ export default function ShareCardModal({ question, answer, onClose }) {
         {/* Close button */}
         <button
           onClick={handleClose}
-          className="w-full py-2.5 rounded-xl text-[13px] text-center cursor-pointer transition-colors mt-2"
+          className="w-full rounded-xl text-[13px] text-center cursor-pointer transition-colors mt-2"
           style={{
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             backgroundColor: "rgba(120,53,15,0.3)",
             border: "1px solid rgba(120,75,20,0.25)",
             color: "rgba(253,230,138,0.5)",

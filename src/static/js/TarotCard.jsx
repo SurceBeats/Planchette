@@ -1,13 +1,14 @@
 import React from "react";
 import { CARD_DESIGNS, DEFAULT_LAYOUT, CARD_ASPECT } from "./cardDesigns.jsx";
 
-export default function TarotCard({ answer, designIndex, width = 360, showQR = true }) {
+export default function TarotCard({ question, answer, designIndex, width = 360, showQR = true, showQuestion = true }) {
   const design = CARD_DESIGNS[designIndex] ?? CARD_DESIGNS[0];
   const layout = design.layout ?? DEFAULT_LAYOUT;
   const height = Math.round(width * CARD_ASPECT);
   const s = width / 360;
 
   const answerSize = answer.length > 120 ? layout.answer.sizes[0] : answer.length > 60 ? layout.answer.sizes[1] : layout.answer.sizes[2];
+  const questionSize = question && question.length > 80 ? layout.answer.sizes[0] * 0.65 : question && question.length > 40 ? layout.answer.sizes[0] * 0.75 : layout.answer.sizes[1] * 0.7;
 
   const shadow = "0 2px 16px rgba(0,0,0,1)";
 
@@ -108,9 +109,41 @@ export default function TarotCard({ answer, designIndex, width = 360, showQR = t
             width: "100%",
           }}
         >
+          {showQuestion && question && question.length > 0 && (
+            <>
+              <div
+                style={{
+                  color: "rgba(254,243,199,0.75)",
+                  fontFamily: "Georgia, 'Times New Roman', serif",
+                  fontSize: layout.spiritLabel.fontSize * s,
+                  letterSpacing: layout.spiritLabel.letterSpacing * s,
+                  lineHeight: 1.2,
+                  marginBottom: 4 * s,
+                  textShadow: shadow,
+                }}
+              >
+                YOU ASKED
+              </div>
+              <div
+                style={{
+                  color: "rgba(255, 255, 255, 0.78)",
+                  fontFamily: "Georgia, 'Times New Roman', serif",
+                  fontStyle: "italic",
+                  textAlign: "center",
+                  fontSize: questionSize * s,
+                  letterSpacing: layout.answer.letterSpacing * 0.5 * s,
+                  lineHeight: 1.3,
+                  marginBottom: layout.spiritLabel.marginBottom * s,
+                  textShadow: shadow,
+                }}
+              >
+                {question}
+              </div>
+            </>
+          )}
           <div
             style={{
-              color: "rgba(254,243,199,0.55)",
+              color: "rgba(254,243,199,0.75)",
               fontFamily: "Georgia, 'Times New Roman', serif",
               fontSize: layout.spiritLabel.fontSize * s,
               letterSpacing: layout.spiritLabel.letterSpacing * s,

@@ -80,6 +80,42 @@ export const DECKS = [
       { id: "presence-03", src: "/__data__/cards/presence-03.webp" },
     ],
   },
+  {
+    id: "mirror",
+    name: "Mirror",
+    color: "#94A3B8",
+    layout: {
+      ...DEFAULT_LAYOUT,
+      logo: { top: 42, size: 22 },
+      title: { top: 78, fontSize: 22, letterSpacing: 5 },
+    },
+    cards: [
+      { id: "mirror-01", src: "/__data__/cards/mirror-01.webp" },
+      { id: "mirror-02", src: "/__data__/cards/mirror-02.webp" },
+      { id: "mirror-03", src: "/__data__/cards/mirror-03.webp" },
+      { id: "mirror-04", src: "/__data__/cards/mirror-04.webp" },
+      { id: "mirror-05", src: "/__data__/cards/mirror-05.webp" },
+      { id: "mirror-06", src: "/__data__/cards/mirror-06.webp" },
+    ],
+  },
+  {
+    id: "the-sin",
+    name: "The Sin",
+    color: "#EF4444",
+    layout: {
+      ...DEFAULT_LAYOUT,
+      logo: { top: 34, size: 22 },
+      title: { top: 68, fontSize: 22, letterSpacing: 5 },
+    },
+    cards: [
+      { id: "the-sin-01", src: "/__data__/cards/the-sin-01.webp" },
+      { id: "the-sin-02", src: "/__data__/cards/the-sin-02.webp" },
+      { id: "the-sin-03", src: "/__data__/cards/the-sin-03.webp" },
+      { id: "the-sin-04", src: "/__data__/cards/the-sin-04.webp" },
+      { id: "the-sin-05", src: "/__data__/cards/the-sin-05.webp" },
+      { id: "the-sin-06", src: "/__data__/cards/the-sin-06.webp" },
+    ],
+  },
 ];
 
 /** Flat list of all cards with their deck layout attached */
