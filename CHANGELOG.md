@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.2.52 (Latest)
+## 1.2.58 (Latest)
+
+- Transparent card export: removed artificial rounded-rect clipping from canvas export, card images' own transparency is now preserved using `source-atop` compositing for the dark overlay
+- Transparent card preview: replaced rectangular overlay div with CSS `filter: brightness()` on the card image so transparent corners render cleanly in the modal preview
+- Removed `borderRadius` and `overflow: hidden` from TarotCard preview container and ShareCardModal preview wrapper
+- New card deck: **Eduard** (6 cards, goldenrod `#B8860B`)
+
+## 1.2.52
 
 - 2 new card decks: **Mirror** (6 cards, slate `#94A3B8`) and **The Sin** (6 cards, red `#EF4444`), 12 new card designs
 - Question on share card: cards now show "YOU ASKED" with the original question in italic above "THE SPIRIT SPOKE", with dynamic font sizing based on question length

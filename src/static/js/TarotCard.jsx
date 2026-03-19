@@ -18,16 +18,11 @@ export default function TarotCard({ question, answer, designIndex, width = 360, 
         position: "relative",
         width,
         height,
-        borderRadius: 12 * s,
-        overflow: "hidden",
         flexShrink: 0,
       }}
     >
-      {/* Card background image */}
-      <img src={design.src} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
-
-      {/* Dark overlay for text legibility */}
-      <div style={{ position: "absolute", inset: 0, backgroundColor: `rgba(0,0,0,${layout.overlayOpacity})` }} />
+      {/* Card background image — brightness replaces the overlay to respect transparency */}
+      <img src={design.src} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: `brightness(${1 - layout.overlayOpacity})` }} draggable={false} />
 
       {/* Logo */}
       <img

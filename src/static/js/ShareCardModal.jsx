@@ -114,18 +114,15 @@ async function renderExportCanvas({ question, answer, designIndex, showQR, showQ
   canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  // Rounded-rect clip
-  const radius = 12 * s;
-  roundRectPath(ctx, 0, 0, W, H, radius);
-  ctx.clip();
-
-  // Background (cover)
+  // Background (cover) — no artificial clip, card images carry their own transparency
   const bg = await loadImg(design.src);
   drawCover(ctx, bg, 0, 0, W, H);
 
-  // Overlay
+  // Overlay — source-atop so it only darkens where the card image has pixels
+  ctx.globalCompositeOperation = "source-atop";
   ctx.fillStyle = `rgba(0,0,0,${layout.overlayOpacity})`;
   ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = "source-over";
 
   // Shadow helpers
   const shadow = () => {
@@ -326,7 +323,7 @@ export default function ShareCardModal({ question, answer, onClose }) {
 
         {/* Card preview */}
         <div className="flex justify-center mb-4">
-          <div style={{ borderRadius: 10, overflow: "hidden", lineHeight: 0 }}>
+          <div style={{ lineHeight: 0 }}>
             <TarotCard question={question} answer={answer} designIndex={selectedDesign} width={PREVIEW_WIDTH} showQR={showQR} showQuestion={showQuestion} />
           </div>
         </div>

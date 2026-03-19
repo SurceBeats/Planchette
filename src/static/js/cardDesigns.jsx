@@ -116,6 +116,24 @@ export const DECKS = [
       { id: "the-sin-06", src: "/__data__/cards/the-sin-06.webp" },
     ],
   },
+  {
+    id: "eduard",
+    name: "Eduard",
+    color: "#B8860B",
+    layout: {
+      ...DEFAULT_LAYOUT,
+      logo: { top: 34, size: 22 },
+      title: { top: 68, fontSize: 22, letterSpacing: 5 },
+    },
+    cards: [
+      { id: "eduard-01", src: "/__data__/cards/eduard-01.webp" },
+      { id: "eduard-02", src: "/__data__/cards/eduard-02.webp" },
+      { id: "eduard-03", src: "/__data__/cards/eduard-03.webp" },
+      { id: "eduard-04", src: "/__data__/cards/eduard-04.webp" },
+      { id: "eduard-05", src: "/__data__/cards/eduard-05.webp" },
+      { id: "eduard-06", src: "/__data__/cards/eduard-06.webp" },
+    ],
+  },
 ];
 
 /** Flat list of all cards with their deck layout attached */
