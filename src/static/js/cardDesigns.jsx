@@ -134,12 +134,31 @@ export const DECKS = [
       { id: "eduard-06", src: "/__data__/cards/eduard-06.webp" },
     ],
   },
+  {
+    id: "magick",
+    name: "Magick",
+    color: "#FFFFFF",
+    layout: {
+      ...DEFAULT_LAYOUT,
+      logo: { top: 50, size: 22 },
+      title: { top: 84, fontSize: 22, letterSpacing: 5 },
+    },
+    cards: [
+      { id: "magick-01", src: "/__data__/cards/magick-01.webp" },
+      { id: "magick-02", src: "/__data__/cards/magick-02.webp" },
+      { id: "magick-03", src: "/__data__/cards/magick-03.webp" },
+      { id: "magick-04", src: "/__data__/cards/magick-04.webp" },
+      { id: "magick-05", src: "/__data__/cards/magick-05.webp" },
+      { id: "magick-06", src: "/__data__/cards/magick-06.webp" },
+    ],
+  },
 ];
 
 /** Flat list of all cards with their deck layout attached */
 export const CARD_DESIGNS = DECKS.flatMap((deck) =>
   deck.cards.map((card) => ({
     ...card,
+    thumb: card.src.replace("/cards/", "/cards/thumbnails/"),
     deckId: deck.id,
     deckName: deck.name,
     deckColor: deck.color,

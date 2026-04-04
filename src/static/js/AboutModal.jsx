@@ -1,7 +1,10 @@
 import React, { useState } from "react";
+import { t, useLanguageRefresh } from "./i18n.jsx";
 
 export default function AboutModal({ onClose }) {
   const [closing, setClosing] = useState(false);
+
+  useLanguageRefresh();
 
   const handleClose = () => setClosing(true);
 
@@ -14,13 +17,11 @@ export default function AboutModal({ onClose }) {
       }}
     >
       <div className={`bg-neutral-900 border border-amber-900/40 rounded-2xl p-8 max-w-md mx-4 shadow-2xl flex flex-col max-h-[85vh] ${closing ? "modal-panel-out" : "modal-panel-in"}`} onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-xl font-serif tracking-widest text-amber-200/80 uppercase text-center mb-6 shrink-0">About</h2>
+        <h2 className="text-xl font-serif tracking-widest text-amber-200/80 uppercase text-center mb-6 shrink-0">{t("About")}</h2>
 
         <div className="space-y-4 text-sm text-amber-200/50 overflow-y-auto min-h-0">
           <div>
-            <p>
-              <span className="text-amber-200/70 font-medium">Planchette</span> is an <span className="text-amber-200/70 font-medium">AI-powered</span> talking board that uses a <span className="text-amber-200/70 font-medium">locally-running</span> artificial intelligence language model to <span className="text-amber-200/70 font-medium">simulate</span> spirit communication.
-            </p>
+            <p>{t("Planchette is an AI-powered talking board that uses a locally-running artificial intelligence language model to simulate spirit communication.")}</p>
             <p className="mt-1">
               <a href="https://github.com/SurceBeats/Planchette" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
                 GitHub
@@ -43,7 +44,7 @@ export default function AboutModal({ onClose }) {
           </div>
 
           <div className="border-t border-amber-900/20 pt-4">
-            <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">AI Models / LLMs</h3>
+            <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">{t("AI Models / LLMs")}</h3>
             <p>
               <a href="https://huggingface.co/BansheeTechnologies/Ouija2-1.7B" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
                 Ouija2-1.7B
@@ -54,14 +55,12 @@ export default function AboutModal({ onClose }) {
           </div>
 
           <div className="border-t border-amber-900/20 pt-4">
-            <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">Privacy</h3>
-            <p>
-              All conversations are processed <span className="text-amber-200/70 font-medium">entirely on your device</span>. No data is collected, stored, or transmitted to external servers.
-            </p>
+            <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">{t("Privacy")}</h3>
+            <p>{t("All conversations are processed entirely on your device. No data is collected, stored, or transmitted to external servers.")}</p>
           </div>
 
           <div className="border-t border-amber-900/20 pt-4">
-            <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">License</h3>
+            <h3 className="text-xs tracking-wider text-amber-200/30 uppercase mb-2">{t("License")}</h3>
             <p>
               <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" className="text-amber-400/40 hover:text-amber-400/70 underline transition-colors">
                 AGPL-3.0
@@ -71,7 +70,7 @@ export default function AboutModal({ onClose }) {
         </div>
 
         <button onClick={handleClose} className="mt-6 w-full py-2 bg-amber-900/30 hover:bg-amber-900/50 border border-amber-900/30 rounded-lg text-amber-200/60 text-sm transition-colors shrink-0">
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>

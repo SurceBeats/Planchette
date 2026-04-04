@@ -1,6 +1,20 @@
 # Changelog
 
-## 1.2.58 (Latest)
+## 1.2.104 (Latest)
+
+- New card deck: **Magick** (6 cards, white `#FFFFFF`) — ported from iOS
+- Multilanguage support too D:
+- Card thumbnails: added `generate_thumbnails.mjs` script (Sharp, dev dependency) that generates 120px-wide webp thumbnails for the card selector (392 KB vs 21 MB full-size), run with `npm run thumbnails`
+- Collapsible deck selector: card decks now display as a stacked hand — collapsed decks show a peek (~13px) of each card behind the first with progressive dark overlay, expanding on click to reveal all cards with selection borders (matches iOS `DeckItem` behaviour)
+- Deck sorting: the deck matching the hashed answer appears first with its matched card leading, remaining decks follow
+- Only one deck expanded at a time: expanding a new deck collapses the previous one and auto-selects its first card
+- Card preview roll animation: switching cards triggers a slide-down + fade-in transition (`cardRollIn`, 250ms)
+- Deck footer shows "Collection" suffix only when expanded
+- Auto-scroll on expand: when an expanded deck's left edge is clipped by the scroll container, it smoothly scrolls into view with 8px margin
+- Mouse drag-to-scroll: horizontal card selector supports click-and-drag scrolling on desktop, with `>3px` movement threshold to distinguish drag from click
+- Safe modal dismiss: overlay close now requires both mousedown and mouseup on the overlay itself — dragging from inside the panel no longer accidentally closes the modal
+
+## 1.2.58
 
 - Transparent card export: removed artificial rounded-rect clipping from canvas export, card images' own transparency is now preserved using `source-atop` compositing for the dark overlay
 - Transparent card preview: replaced rectangular overlay div with CSS `filter: brightness()` on the card image so transparent corners render cleanly in the modal preview

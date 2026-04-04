@@ -51,6 +51,21 @@
   animation: modalPanelOut 150ms ease-in forwards;
 }
 
+/* ── Card roll-in (preview swap animation) ── */
+@keyframes cardRollIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.card-roll-in {
+  animation: cardRollIn 250ms ease-out forwards;
+}
+
 /* ── Helpline button pulse ────────────────────────────────────── */
 @keyframes helplinePulse {
   0%,

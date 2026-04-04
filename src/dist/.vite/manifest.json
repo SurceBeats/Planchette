@@ -1,18 +1,19 @@
 {
+  "_planchette-Ct_59xNS_uN0.js": {
+    "file": "assets/planchette-Ct_59xNS_uN0.js",
+    "name": "i18n"
+  },
   "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js": {
-    "file": "assets/planchette-FJnj0VVEPqHV.js",
+    "file": "assets/planchette-dPyHMJiSc2H7.js",
     "name": "react-pdf.browser",
     "src": "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js",
     "isDynamicEntry": true,
     "imports": [
-      "src/static/js/__main__.ts"
-    ],
-    "css": [
-      "assets/planchette-q4PzWRVmVlaU.css"
+      "_planchette-Ct_59xNS_uN0.js"
     ]
   },
   "src/static/css/global.css": {
-    "file": "assets/planchette-q4PzWRVmVlaU.css",
+    "file": "assets/planchette-C9Lljd2nb5hA.css",
     "src": "src/static/css/global.css",
     "isEntry": true,
     "name": "global",
@@ -20,16 +21,31 @@
       "global.css"
     ]
   },
-  "src/static/js/__main__.ts": {
-    "file": "assets/planchette-qq_BAWM90RIk.js",
-    "name": "__main__",
-    "src": "src/static/js/__main__.ts",
+  "src/static/js/mount_points/__auth__.ts": {
+    "file": "assets/planchette-DorxgEmoqsIg.js",
+    "name": "__auth__",
+    "src": "src/static/js/mount_points/__auth__.ts",
     "isEntry": true,
+    "imports": [
+      "_planchette-Ct_59xNS_uN0.js"
+    ],
+    "css": [
+      "assets/planchette-C9Lljd2nb5hA.css"
+    ]
+  },
+  "src/static/js/mount_points/__main__.ts": {
+    "file": "assets/planchette-BXJxVgYhoImc.js",
+    "name": "__main__",
+    "src": "src/static/js/mount_points/__main__.ts",
+    "isEntry": true,
+    "imports": [
+      "_planchette-Ct_59xNS_uN0.js"
+    ],
     "dynamicImports": [
       "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js"
     ],
     "css": [
-      "assets/planchette-q4PzWRVmVlaU.css"
+      "assets/planchette-C9Lljd2nb5hA.css"
     ]
   }
 }

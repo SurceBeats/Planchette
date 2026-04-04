@@ -31,7 +31,8 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input: {
         global: resolve(__dirname, "src/static/css/global.css"),
-        __main__: resolve(__dirname, "src/static/js/__main__.ts"),
+        __main__: resolve(__dirname, "src/static/js/mount_points/__main__.ts"),
+        __auth__: resolve(__dirname, "src/static/js/mount_points/__auth__.ts"),
       },
       output: {
         entryFileNames: "assets/planchette-[hash:12].js",

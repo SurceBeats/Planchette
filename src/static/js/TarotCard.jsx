@@ -1,5 +1,6 @@
 import React from "react";
 import { CARD_DESIGNS, DEFAULT_LAYOUT, CARD_ASPECT } from "./cardDesigns.jsx";
+import { t } from "./i18n.jsx";
 
 export default function TarotCard({ question, answer, designIndex, width = 360, showQR = true, showQuestion = true }) {
   const design = CARD_DESIGNS[designIndex] ?? CARD_DESIGNS[0];
@@ -76,7 +77,7 @@ export default function TarotCard({ question, answer, designIndex, width = 360, 
             textShadow: shadow,
           }}
         >
-          THE TALKING BOARD
+          {t("THE TALKING BOARD")}
         </div>
       </div>
 
@@ -117,7 +118,7 @@ export default function TarotCard({ question, answer, designIndex, width = 360, 
                   textShadow: shadow,
                 }}
               >
-                YOU ASKED
+                {t("YOU ASKED")}
               </div>
               <div
                 style={{
@@ -147,7 +148,7 @@ export default function TarotCard({ question, answer, designIndex, width = 360, 
               textShadow: shadow,
             }}
           >
-            THE SPIRIT SPOKE
+            {t("THE SPIRIT SPOKE")}
           </div>
           <div
             style={{
