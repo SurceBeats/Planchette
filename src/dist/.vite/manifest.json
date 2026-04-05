@@ -13,7 +13,7 @@
     ]
   },
   "src/static/css/global.css": {
-    "file": "assets/planchette-C9Lljd2nb5hA.css",
+    "file": "assets/planchette-BuNR3b0uDAZs.css",
     "src": "src/static/css/global.css",
     "isEntry": true,
     "name": "global",
@@ -22,7 +22,7 @@
     ]
   },
   "src/static/js/mount_points/__auth__.ts": {
-    "file": "assets/planchette-DorxgEmoqsIg.js",
+    "file": "assets/planchette-CToWVOS1rTbX.js",
     "name": "__auth__",
     "src": "src/static/js/mount_points/__auth__.ts",
     "isEntry": true,
@@ -30,11 +30,11 @@
       "_planchette-Ct_59xNS_uN0.js"
     ],
     "css": [
-      "assets/planchette-C9Lljd2nb5hA.css"
+      "assets/planchette-BuNR3b0uDAZs.css"
     ]
   },
   "src/static/js/mount_points/__main__.ts": {
-    "file": "assets/planchette-CQWij-cxbUtc.js",
+    "file": "assets/planchette-BpIc1sC1obck.js",
     "name": "__main__",
     "src": "src/static/js/mount_points/__main__.ts",
     "isEntry": true,
@@ -45,7 +45,7 @@
       "node_modules/@react-pdf/renderer/lib/react-pdf.browser.js"
     ],
     "css": [
-      "assets/planchette-C9Lljd2nb5hA.css"
+      "assets/planchette-BuNR3b0uDAZs.css"
     ]
   }
 }
