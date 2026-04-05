@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.104 (Latest)
+## 1.2.106 (Latest)
+
+- 2 new card decks: **Space Time** (8 cards, blue `#3B82F6`) and **Wiccan** (6 cards, pink `#EC4899`) — ported all changes from iOS version
+- Fixed crisis classifier not triggering: added missing `stop` tokens to the LLM classification call (ported from iOS `localLlm.ts`), which caused the 1.7B model to generate garbage tokens instead of a clean SAFE/CRISIS response
+- Crisis responses can no longer be shared as cards — the share button is replaced with a red blocked icon (circle-slash), matching iOS behaviour
+
+## 1.2.104
 
 - New card deck: **Magick** (6 cards, white `#FFFFFF`) — ported from iOS
 - Multilanguage support too D:

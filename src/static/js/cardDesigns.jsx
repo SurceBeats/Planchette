@@ -152,6 +152,44 @@ export const DECKS = [
       { id: "magick-06", src: "/__data__/cards/magick-06.webp" },
     ],
   },
+  {
+    id: "spacetime",
+    name: "Space Time",
+    color: "#3B82F6",
+    layout: {
+      ...DEFAULT_LAYOUT,
+      logo: { top: 38, size: 22 },
+      title: { top: 74, fontSize: 22, letterSpacing: 5 },
+    },
+    cards: [
+      { id: "spacetime-01", src: "/__data__/cards/spacetime-01.webp" },
+      { id: "spacetime-02", src: "/__data__/cards/spacetime-02.webp" },
+      { id: "spacetime-03", src: "/__data__/cards/spacetime-03.webp" },
+      { id: "spacetime-04", src: "/__data__/cards/spacetime-04.webp" },
+      { id: "spacetime-05", src: "/__data__/cards/spacetime-05.webp" },
+      { id: "spacetime-06", src: "/__data__/cards/spacetime-06.webp" },
+      { id: "spacetime-07", src: "/__data__/cards/spacetime-07.webp" },
+      { id: "spacetime-08", src: "/__data__/cards/spacetime-08.webp" },
+    ],
+  },
+  {
+    id: "wiccan",
+    name: "Wiccan",
+    color: "#EC4899",
+    layout: {
+      ...DEFAULT_LAYOUT,
+      logo: { top: 38, size: 22 },
+      title: { top: 74, fontSize: 22, letterSpacing: 5 },
+    },
+    cards: [
+      { id: "wiccan-01", src: "/__data__/cards/wiccan-01.webp" },
+      { id: "wiccan-02", src: "/__data__/cards/wiccan-02.webp" },
+      { id: "wiccan-03", src: "/__data__/cards/wiccan-03.webp" },
+      { id: "wiccan-04", src: "/__data__/cards/wiccan-04.webp" },
+      { id: "wiccan-05", src: "/__data__/cards/wiccan-05.webp" },
+      { id: "wiccan-06", src: "/__data__/cards/wiccan-06.webp" },
+    ],
+  },
 ];
 
 /** Flat list of all cards with their deck layout attached */

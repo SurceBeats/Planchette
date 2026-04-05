@@ -258,6 +258,7 @@ def classify_message(llm, user_input, recent_history=None):
             ],
             max_tokens=4,
             temperature=0.1,
+            stop=["</s>", "\n", "<|im_end|>", "<|im_start|>"],
             stream=False,
         )
         output = result["choices"][0]["message"]["content"]

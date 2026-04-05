@@ -1260,13 +1260,22 @@ export default function PlanchetteBoard() {
                     const hasAnswer = !!spiritEntry;
                     return (
                       <div key={idx} className="log-pair flex items-center gap-1.5">
-                        {/* Share icon — centered left of the pair */}
-                        <button onClick={hasAnswer ? () => setShareData({ question: userEntry.text, answer: spiritEntry.text }) : undefined} disabled={!hasAnswer} className={`flex-shrink-0 p-1 rounded transition-all ${hasAnswer ? "cursor-pointer opacity-40 hover:opacity-80" : "opacity-20 cursor-default"}`} style={{ color: theme.colors.uiSpiritText }} title={hasAnswer ? "Share as card" : "Waiting for response..."}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 2L12 15M12 2L8 6M12 2L16 6" />
-                            <path d="M4 12V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V12" />
-                          </svg>
-                        </button>
+                        {/* Share icon or crisis-blocked icon */}
+                        {spiritEntry?.crisis ? (
+                          <span className="flex-shrink-0 p-1 opacity-40" title="Sharing disabled for this response">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.4)" strokeWidth="2" strokeLinecap="round">
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="M4.93 4.93l14.14 14.14" />
+                            </svg>
+                          </span>
+                        ) : (
+                          <button onClick={hasAnswer ? () => setShareData({ question: userEntry.text, answer: spiritEntry.text }) : undefined} disabled={!hasAnswer} className={`flex-shrink-0 p-1 rounded transition-all ${hasAnswer ? "cursor-pointer opacity-40 hover:opacity-80" : "opacity-20 cursor-default"}`} style={{ color: theme.colors.uiSpiritText }} title={hasAnswer ? "Share as card" : "Waiting for response..."}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 2L12 15M12 2L8 6M12 2L16 6" />
+                              <path d="M4 12V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V12" />
+                            </svg>
+                          </button>
+                        )}
                         {/* Question + answer block */}
                         <div className="flex-1 border-l-2 pl-2 py-1 space-y-0.5" style={{ borderColor: theme.colors.uiLogBorder }}>
                           <div style={{ color: "rgba(163,163,163,0.6)" }}>
