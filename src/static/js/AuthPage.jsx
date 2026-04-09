@@ -7,7 +7,7 @@ export default function AuthPage({ mode, flash }) {
   const isSetup = mode === "setup";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-950 select-none px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-950 select-none px-4 relative">
       <img src="/__data__/logoSmall.png" alt="Planchette" className="w-16 h-16 sm:w-20 sm:h-20 mb-4 opacity-80 smoke-text" />
       <h1 className="text-2xl sm:text-3xl font-serif tracking-widest text-amber-200/80 uppercase mb-1 smoke-text">Planchette</h1>
       <p className="text-[10px] sm:text-xs tracking-[0.3em] text-amber-200/30 uppercase mb-8 subtitle-fade">{t("The Talking Board")}</p>
@@ -43,6 +43,13 @@ export default function AuthPage({ mode, flash }) {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="absolute bottom-4 flex flex-col items-center gap-1">
+        <span className="text-[9px] text-gray-500 tracking-wide uppercase">Running it on elsewhereOS?</span>
+        <a href="https://github.com/BansheeTech/HomeDockOS" target="_blank" rel="noopener noreferrer" className="opacity-80 hover:opacity-100 transition-opacity duration-500">
+          <img src="/__data__/badges/HDOSDarkSmallBadge.svg" alt="Get it on HomeDock OS" />
+        </a>
       </div>
     </div>
   );

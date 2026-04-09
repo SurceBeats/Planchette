@@ -12,7 +12,7 @@ export default function Footer({ onAbout, onDisclaimer }) {
         </a>
       </div>
       <p className="text-[11px] text-amber-200/25 text-center flex flex-wrap items-center justify-center gap-x-1.5">
-        <span>v1.2.106</span>
+        <span>v1.2.108</span>
         <span>|</span>
         <button onClick={onAbout} className="hover:text-amber-200/50 transition-colors cursor-pointer">
           {t("About Planchette")}

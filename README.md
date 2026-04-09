@@ -117,6 +117,14 @@ git clone https://github.com/SurceBeats/Planchette.git
 docker compose up -d
 ```
 
+### HomeDock OS
+
+Download [HomeDock OS](https://github.com/BansheeTech/HomeDockOS) and install it from the App Store.
+
+<p>
+  <a href="https://github.com/BansheeTech/HomeDockOS"><img src="__data__/badges/HDOSDarkBigBadge.svg" alt="Install on HomeDock OS" /></a>
+</p>
+
 ---
 
 ## Security Vulnerabilities

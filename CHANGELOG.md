@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.108 (Latest)
+
+- Minor changes
+
 ## 1.2.106 (Latest)
 
 - 2 new card decks: **Space Time** (8 cards, blue `#3B82F6`) and **Wiccan** (6 cards, pink `#EC4899`) — ported all changes from iOS version
